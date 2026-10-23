@@ -1,0 +1,1613 @@
+/*
+ * Almira Tiket Event — Design System
+ * ----------------------------------
+ * Hand-authored implementation of `styling.md` (Blue & Clean UI).
+ *
+ * Why plain CSS instead of the repo's Tailwind/Vite pipeline:
+ * `styling.md` is authored as raw CSS tokens and component rules, and the
+ * Node toolchain is not installed in this environment, so Vite cannot
+ * produce a build. This file is served directly from `public/` so the UI
+ * renders without a build step. Migrating these tokens into Tailwind v4
+ * `@theme` is a tracked follow-up, not an abandoned decision.
+ *
+ * Token values are copied verbatim from `styling.md`. Do not invent new
+ * colors, radii, or spacing values here — extend `styling.md` first.
+ */
+
+/* ==========================================================================
+   1. Design tokens
+   ========================================================================== */
+
+:root {
+    /* Brand / primary blue */
+    --color-primary-950: #0B2F68;
+    --color-primary-900: #0D3978;
+    --color-primary-800: #104B91;
+    --color-primary-700: #1762B2;
+    --color-primary-600: #2378D1;
+    --color-primary-500: #3D91E5;
+
+    /* Pale blue surfaces */
+    --color-blue-100: #EAF4FF;
+    --color-blue-075: #F2F8FF;
+    --color-blue-050: #F7FAFE;
+
+    /* CTA / success green */
+    --color-success-700: #147A38;
+    --color-success-600: #19843E;
+    --color-success-100: #E6F5EA;
+
+    /* Neutral palette */
+    --color-white: #FFFFFF;
+    --color-neutral-950: #152235;
+    --color-neutral-800: #344256;
+    --color-neutral-700: #4C5B70;
+    --color-neutral-600: #66758A;
+    --color-neutral-500: #8390A2;
+    --color-neutral-300: #D7E0EA;
+    --color-neutral-200: #E6ECF2;
+    --color-neutral-100: #F3F6F9;
+
+    /* Semantic colors */
+    --color-warning-700: #9A5B00;
+    --color-warning-100: #FFF4D9;
+    --color-danger-700: #B42318;
+    --color-danger-100: #FDECEC;
+    --color-info-700: #155AA8;
+    --color-info-100: #E7F1FF;
+
+    /* Text and surfaces */
+    --color-text-primary: var(--color-neutral-950);
+    --color-text-secondary: var(--color-neutral-600);
+    --color-text-inverse: #FFFFFF;
+    --color-page: #FFFFFF;
+    --color-surface: #FFFFFF;
+    --color-surface-muted: var(--color-blue-100);
+    --color-border: var(--color-neutral-200);
+    --color-border-strong: var(--color-neutral-300);
+
+    /* Typography */
+    --font-family-sans: "Inter", "Plus Jakarta Sans", system-ui, -apple-system,
+        BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-tight: 1.2;
+    --line-height-heading: 1.3;
+    --line-height-body: 1.6;
+
+    /* Spacing — 4px base unit */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+
+    /* Layout */
+    --content-max-width: 1440px;
+    --page-padding-desktop: 32px;
+    --page-padding-tablet: 24px;
+    --page-padding-mobile: 16px;
+    --grid-gap: 24px;
+    --grid-gap-compact: 16px;
+    --sidebar-width: 256px;
+    --topbar-height: 68px;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 18px;
+    --radius-pill: 999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(11, 47, 104, 0.06);
+    --shadow-md: 0 4px 12px rgba(11, 47, 104, 0.08);
+    --shadow-lg: 0 12px 28px rgba(11, 47, 104, 0.12);
+
+    /* Motion */
+    --transition-fast: 140ms ease;
+    --transition-base: 160ms ease;
+    --transition-slow: 220ms ease;
+
+    /* Focus ring */
+    --focus-ring: 0 0 0 3px rgba(35, 120, 209, 0.3);
+}
+
+/* ==========================================================================
+   2. Base elements
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    background: var(--color-blue-050);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-body);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+    margin: 0;
+    color: var(--color-neutral-950);
+    line-height: var(--line-height-heading);
+}
+
+p {
+    margin: 0;
+}
+
+a {
+    color: var(--color-primary-700);
+    text-decoration: none;
+    transition: color var(--transition-base);
+}
+
+a:hover {
+    color: var(--color-primary-800);
+    text-decoration: underline;
+}
+
+:focus-visible {
+    outline: 3px solid rgba(35, 120, 209, 0.3);
+    outline-offset: 2px;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* Visually hidden but available to assistive technology. */
+.u-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Skip link — first tab stop on every page. */
+.skip-link {
+    position: absolute;
+    left: var(--space-4);
+    top: -100px;
+    z-index: 100;
+    padding: var(--space-2) var(--space-4);
+    background: var(--color-white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    font-weight: var(--font-weight-semibold);
+    transition: top var(--transition-base);
+}
+
+.skip-link:focus {
+    top: var(--space-4);
+}
+
+/* ==========================================================================
+   3. Typography scale
+   ========================================================================== */
+
+.page-title {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--color-primary-900);
+}
+
+.page-description {
+    margin-top: var(--space-2);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.section-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+}
+
+.card-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.text-muted {
+    color: var(--color-text-secondary);
+}
+
+.text-sm {
+    font-size: var(--font-size-sm);
+}
+
+.text-xs {
+    font-size: var(--font-size-xs);
+}
+
+@media (min-width: 1024px) {
+    .page-title {
+        font-size: var(--font-size-3xl);
+    }
+}
+
+/* ==========================================================================
+   4. Layout — container, app shell, grids
+   ========================================================================== */
+
+.container {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding-inline: var(--page-padding-mobile);
+}
+
+.container-narrow {
+    max-width: 560px;
+}
+
+@media (min-width: 640px) {
+    .container {
+        padding-inline: var(--page-padding-tablet);
+    }
+}
+
+@media (min-width: 1024px) {
+    .container {
+        padding-inline: var(--page-padding-desktop);
+    }
+}
+
+/* ---- Admin app shell ---------------------------------------------------- */
+
+.app-shell {
+    min-height: 100vh;
+}
+
+.app-sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 40;
+    width: var(--sidebar-width);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-5) var(--space-4);
+    background: var(--color-primary-950);
+    color: var(--color-text-inverse);
+    overflow-y: auto;
+    /* Off-canvas drawer on mobile; revealed via the data-open state. */
+    transform: translateX(-100%);
+    transition: transform var(--transition-slow);
+}
+
+.app-sidebar[data-open='true'] {
+    transform: translateX(0);
+}
+
+.app-sidebar-brand {
+    display: block;
+    padding: var(--space-2) var(--space-2) var(--space-5);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+}
+
+.app-sidebar-brand:hover {
+    color: var(--color-text-inverse);
+    text-decoration: none;
+}
+
+.app-sidebar-section {
+    margin-top: var(--space-4);
+    padding-inline: var(--space-2);
+    color: rgba(255, 255, 255, 0.55);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.app-nav {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.app-nav-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    transition: background var(--transition-base), color var(--transition-base);
+}
+
+.app-nav-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-inverse);
+    text-decoration: none;
+}
+
+/* Active item: pale-blue background with primary-blue text per styling.md. */
+.app-nav-link[aria-current='page'] {
+    background: var(--color-blue-100);
+    color: var(--color-primary-900);
+    font-weight: var(--font-weight-semibold);
+}
+
+.app-sidebar-footer {
+    margin-top: auto;
+    padding-top: var(--space-5);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.app-sidebar-footer-label {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: var(--font-size-xs);
+}
+
+.app-sidebar-footer-name {
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Backdrop behind the mobile drawer. */
+.app-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(11, 47, 104, 0.45);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.app-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.app-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--topbar-height);
+    padding-inline: var(--page-padding-mobile);
+    background: var(--color-white);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.app-topbar-start,
+.app-topbar-end {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.app-content {
+    flex: 1;
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: var(--space-6) var(--page-padding-mobile) var(--space-12);
+}
+
+/* Hamburger — only present below the desktop breakpoint. */
+.app-sidebar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    background: var(--color-white);
+    color: var(--color-neutral-800);
+    cursor: pointer;
+}
+
+.app-sidebar-toggle:hover {
+    background: var(--color-neutral-100);
+}
+
+@media (min-width: 640px) {
+    .app-topbar,
+    .app-content {
+        padding-inline: var(--page-padding-tablet);
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Static sidebar; drawer behaviour and backdrop no longer apply. */
+    .app-sidebar {
+        transform: none;
+        transition: none;
+    }
+
+    .app-sidebar-backdrop,
+    .app-sidebar-toggle {
+        display: none;
+    }
+
+    .app-main {
+        margin-inline-start: var(--sidebar-width);
+    }
+
+    .app-topbar,
+    .app-content {
+        padding-inline: var(--page-padding-desktop);
+    }
+}
+
+/* ---- Public layout ----------------------------------------------------- */
+
+.public-header {
+    background: var(--color-primary-950);
+    color: var(--color-text-inverse);
+}
+
+.public-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-height: var(--topbar-height);
+}
+
+.public-brand {
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-bold);
+}
+
+.public-brand:hover {
+    color: var(--color-text-inverse);
+    text-decoration: none;
+}
+
+.public-main {
+    display: block;
+    padding-block: var(--space-8) var(--space-12);
+}
+
+.public-footer {
+    padding-block: var(--space-6);
+    background: var(--color-white);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* ---- Page header ------------------------------------------------------- */
+
+.page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.page-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+
+@media (min-width: 768px) {
+    .page-header {
+        flex-direction: row;
+        align-items: flex-start;
+        justify-content: space-between;
+    }
+}
+
+/* ---- Grids and spacing helpers ----------------------------------------- */
+
+.grid {
+    display: grid;
+    gap: var(--grid-gap-compact);
+}
+
+@media (min-width: 640px) {
+    .grid {
+        gap: var(--grid-gap);
+    }
+
+    .grid-cols-2,
+    .grid-cols-3,
+    .grid-cols-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .grid-cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid-cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.stack > * + * {
+    margin-top: var(--space-4);
+}
+
+.stack-lg > * + * {
+    margin-top: var(--space-6);
+}
+
+.cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+/* ==========================================================================
+   5. Cards
+   ========================================================================== */
+
+.card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+}
+
+.card-elevated {
+    box-shadow: var(--shadow-sm);
+}
+
+.card-muted {
+    background: var(--color-blue-100);
+    border-color: transparent;
+}
+
+.card-header {
+    margin-bottom: var(--space-4);
+}
+
+.card-footer {
+    margin-top: var(--space-4);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+}
+
+@media (min-width: 640px) {
+    .card {
+        padding: var(--space-6);
+    }
+}
+
+/* KPI / metric card */
+.kpi-label {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.kpi-value {
+    margin-top: var(--space-2);
+    color: var(--color-primary-700);
+    font-size: var(--font-size-3xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+}
+
+.kpi-meta {
+    margin-top: var(--space-1);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+}
+
+/* ==========================================================================
+   6. Buttons
+   ========================================================================== */
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    padding: 10px var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: var(--color-success-600);
+    color: var(--color-text-inverse);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background var(--transition-base), color var(--transition-base),
+        border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.button:hover {
+    background: var(--color-success-700);
+    color: var(--color-text-inverse);
+    text-decoration: none;
+}
+
+.button:active {
+    transform: translateY(1px);
+}
+
+/* Disabled covers both <button disabled> and anchors marked aria-disabled. */
+.button:disabled,
+.button[aria-disabled='true'] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Secondary — white with neutral border. */
+.button-secondary {
+    background: var(--color-white);
+    border-color: var(--color-border-strong);
+    color: var(--color-neutral-800);
+}
+
+.button-secondary:hover {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-950);
+}
+
+/* Tertiary / ghost — transparent with blue text. */
+.button-ghost {
+    background: transparent;
+    color: var(--color-primary-700);
+}
+
+.button-ghost:hover {
+    background: var(--color-blue-100);
+    color: var(--color-primary-800);
+}
+
+/* Ghost variant for use on dark surfaces (sidebar, navy header). */
+.button-ghost-inverse {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.45);
+    color: var(--color-text-inverse);
+}
+
+.button-ghost-inverse:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--color-text-inverse);
+}
+
+/* Destructive — only for destructive operations. */
+.button-danger {
+    background: var(--color-danger-700);
+}
+
+.button-danger:hover {
+    background: #961C13;
+}
+
+.button-sm {
+    min-height: 36px;
+    padding: 6px var(--space-3);
+    font-size: var(--font-size-xs);
+}
+
+.button-block {
+    width: 100%;
+}
+
+/* Loading state: spinner replaces nothing, so keep the label for context. */
+.button[data-loading='true'] {
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.button[data-loading='true']::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: var(--radius-pill);
+    animation: button-spin 600ms linear infinite;
+}
+
+@keyframes button-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ==========================================================================
+   7. Forms
+   ========================================================================== */
+
+.field {
+    display: block;
+    margin-bottom: var(--space-5);
+}
+
+.label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--color-neutral-800);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.label-required::after {
+    content: '*';
+    margin-left: var(--space-1);
+    color: var(--color-danger-700);
+}
+
+.input,
+.select,
+.textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px var(--space-3);
+    background: var(--color-white);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font: inherit;
+    font-size: var(--font-size-sm);
+    transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+
+.textarea {
+    min-height: 120px;
+    padding: var(--space-3);
+    line-height: var(--line-height-body);
+    resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+    color: var(--color-neutral-500);
+}
+
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+    outline: none;
+    border-color: var(--color-primary-600);
+    box-shadow: var(--focus-ring);
+}
+
+.input:disabled,
+.select:disabled,
+.textarea:disabled {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-500);
+    cursor: not-allowed;
+}
+
+/* Error state is signalled by aria-invalid, never by color alone — the
+   paired .field-error message carries the text. */
+.input[aria-invalid='true'],
+.select[aria-invalid='true'],
+.textarea[aria-invalid='true'] {
+    border-color: var(--color-danger-700);
+}
+
+.input[aria-invalid='true']:focus-visible,
+.select[aria-invalid='true']:focus-visible,
+.textarea[aria-invalid='true']:focus-visible {
+    box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.22);
+}
+
+.field-hint {
+    margin-top: 6px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-xs);
+}
+
+.field-error {
+    margin-top: 6px;
+    color: var(--color-danger-700);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+}
+
+/* Checkbox / radio rows */
+.choice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+}
+
+.choice input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--color-primary-600);
+    flex-shrink: 0;
+}
+
+.fieldset {
+    margin: 0 0 var(--space-6);
+    padding: 0;
+    border: 0;
+}
+
+.fieldset-legend {
+    padding: 0;
+    margin-bottom: var(--space-4);
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* ==========================================================================
+   8. Badges
+   ========================================================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: 3px var(--space-2);
+    border-radius: var(--radius-pill);
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-700);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.badge-neutral {
+    background: var(--color-neutral-100);
+    color: var(--color-neutral-700);
+}
+
+.badge-info {
+    background: var(--color-info-100);
+    color: var(--color-info-700);
+}
+
+.badge-warning {
+    background: var(--color-warning-100);
+    color: var(--color-warning-700);
+}
+
+.badge-success {
+    background: var(--color-success-100);
+    color: var(--color-success-700);
+}
+
+.badge-danger {
+    background: var(--color-danger-100);
+    color: var(--color-danger-700);
+}
+
+/* ==========================================================================
+   9. Alerts
+   ========================================================================== */
+
+.alert {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+}
+
+.alert-title {
+    font-weight: var(--font-weight-semibold);
+}
+
+.alert-info {
+    background: var(--color-info-100);
+    border-color: rgba(21, 90, 168, 0.18);
+    color: var(--color-info-700);
+}
+
+.alert-success {
+    background: var(--color-success-100);
+    border-color: rgba(20, 122, 56, 0.18);
+    color: var(--color-success-700);
+}
+
+.alert-warning {
+    background: var(--color-warning-100);
+    border-color: rgba(154, 91, 0, 0.18);
+    color: var(--color-warning-700);
+}
+
+.alert-error {
+    background: var(--color-danger-100);
+    border-color: rgba(180, 35, 24, 0.18);
+    color: var(--color-danger-700);
+}
+
+.alert ul {
+    margin: var(--space-2) 0 0;
+    padding-left: var(--space-5);
+}
+
+/* ==========================================================================
+   10. Tables and data-dense screens
+   ========================================================================== */
+
+.table-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+
+.table-toolbar-grow {
+    flex: 1 1 240px;
+}
+
+/* Horizontal scroll container — keeps columns readable instead of shrinking
+   text to fit, per styling.md section 11. */
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    vertical-align: middle;
+}
+
+.table thead th {
+    background: var(--color-blue-050);
+    border-bottom: 1px solid var(--color-border-strong);
+    color: var(--color-neutral-700);
+    font-weight: var(--font-weight-semibold);
+    white-space: nowrap;
+}
+
+.table tbody tr + tr td {
+    border-top: 1px solid var(--color-border);
+}
+
+.table tbody tr {
+    transition: background var(--transition-base);
+}
+
+.table tbody tr:hover {
+    background: var(--color-blue-050);
+}
+
+.table tbody tr[aria-selected='true'] {
+    background: var(--color-blue-100);
+}
+
+.table td {
+    min-height: 48px;
+}
+
+/* Right-align numeric and currency columns consistently. */
+.table .is-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+/* ==========================================================================
+   11. Empty, loading, and no-results states
+   ========================================================================== */
+
+.state {
+    padding: var(--space-10) var(--space-4);
+    text-align: center;
+}
+
+.state-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-4);
+    border-radius: var(--radius-pill);
+    background: var(--color-blue-100);
+    color: var(--color-primary-700);
+}
+
+.state-title {
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.state-description {
+    max-width: 420px;
+    margin: var(--space-2) auto 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.state-actions {
+    margin-top: var(--space-5);
+}
+
+/* Skeleton placeholder for loading regions. */
+.skeleton {
+    background: var(--color-neutral-100);
+    border-radius: var(--radius-sm);
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+    50% {
+        opacity: 0.55;
+    }
+}
+
+/* ==========================================================================
+   12. Dialog
+   ========================================================================== */
+
+.dialog {
+    width: min(520px, calc(100vw - 2 * var(--space-4)));
+    padding: var(--space-6);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-lg);
+    color: var(--color-text-primary);
+}
+
+.dialog::backdrop {
+    background: rgba(11, 47, 104, 0.45);
+}
+
+.dialog-title {
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+}
+
+.dialog-body {
+    margin-top: var(--space-3);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.dialog-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-6);
+}
+
+/* ==========================================================================
+   13. Utilities
+   ========================================================================== */
+
+.u-mb-4 {
+    margin-bottom: var(--space-4);
+}
+
+.u-mb-6 {
+    margin-bottom: var(--space-6);
+}
+
+.u-mt-4 {
+    margin-top: var(--space-4);
+}
+
+.u-mt-6 {
+    margin-top: var(--space-6);
+}
+
+.u-text-center {
+    text-align: center;
+}
+
+/* ==========================================================================
+   14. Event detail and poster
+   ========================================================================== */
+
+.detail-list {
+    margin: 0;
+}
+
+.detail-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.detail-row:last-child {
+    border-bottom: 0;
+}
+
+.detail-row dt {
+    flex: 0 0 9rem;
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.detail-row dd {
+    flex: 1 1 12rem;
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-primary);
+}
+
+/* Poster thumbnail shown next to the upload control. */
+.event-poster-thumb {
+    display: block;
+    width: 8rem;
+    height: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+/* Full poster preview on the event detail page. */
+.event-poster-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+/* ==========================================================================
+   15. Public event list and ordering
+   ========================================================================== */
+
+/* Responsive card grid: auto-fill collapses to one column on mobile without
+   needing a separate breakpoint. */
+.event-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: var(--grid-gap, 24px);
+}
+
+.event-card {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+    transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.event-card:hover {
+    border-color: var(--color-border-strong);
+    box-shadow: var(--shadow-md);
+}
+
+.event-card-media {
+    display: block;
+    /* Fixed ratio so posters of different sizes keep the grid aligned. */
+    aspect-ratio: 3 / 4;
+    background: var(--color-surface-muted);
+}
+
+.event-card-media img {
+    width: 100%;
+    height: 100%;
+    /* Cover, not contain: fills the tile without letterboxing. */
+    object-fit: cover;
+}
+
+.event-card-media-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: var(--space-4);
+    color: var(--color-primary-700);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+}
+
+.event-card-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+}
+
+.event-card-title {
+    margin: 0;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.4;
+}
+
+.event-card-title a {
+    color: var(--color-text-primary);
+    text-decoration: none;
+}
+
+.event-card-title a:hover {
+    color: var(--color-primary-700);
+}
+
+.event-card-meta {
+    margin: 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.event-card-price {
+    margin: 0;
+    color: var(--color-text-primary);
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+}
+
+.event-card-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: center;
+    justify-content: space-between;
+    /* Pushes the footer down so buttons line up across uneven cards. */
+    margin-top: auto;
+    padding-top: var(--space-2);
+}
+
+/* Poster at the top of the ordering page (PRD FR-03). Height is capped so a
+   tall poster does not push the form entirely below the fold. */
+.event-poster-hero {
+    display: block;
+    width: 100%;
+    max-height: 26rem;
+    margin-bottom: var(--space-6);
+    object-fit: contain;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface-muted);
+}
+
+/* Event details beside the order form on desktop, stacked on mobile. */
+.order-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--grid-gap, 24px);
+    align-items: start;
+}
+
+@media (min-width: 900px) {
+    .order-layout {
+        grid-template-columns: 3fr 2fr;
+    }
+}
+
+/* ==========================================================================
+   16. Manual payment — instructions and proof
+   ========================================================================== */
+
+/* Numbered transfer steps. Uses the list marker rather than a custom counter
+   so screen readers still announce the ordinal position. */
+.payment-steps {
+    margin: var(--space-4) 0 0;
+    padding-inline-start: var(--space-5);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+    line-height: 1.6;
+}
+
+.payment-steps li + li {
+    margin-top: var(--space-2);
+}
+
+.payment-instructions .detail-list {
+    margin: 0;
+}
+
+/* Proof preview. The image is untrusted participant input of unknown
+   dimensions, so it is constrained on both axes and centred on a neutral
+   surface rather than being allowed to set the card's height. */
+.payment-proof-preview {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+}
+
+.payment-proof-preview img {
+    display: block;
+    width: 100%;
+    max-height: 26rem;
+    /* Contain, not cover: an admin must see the whole receipt, including the
+       nominal and timestamp at its edges. */
+    object-fit: contain;
+    margin-inline: auto;
+}
+
+/* ==========================================================================
+   17. E-ticket
+   ========================================================================== */
+
+/* QR above the details on mobile, side by side once there is room. */
+.ticket {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+@media (min-width: 640px) {
+    .ticket {
+        grid-template-columns: auto 1fr;
+    }
+}
+
+/* The SVG is rendered at a fixed module size by the writer; cap it here so
+   it stays scannable without overflowing a narrow screen. */
+.ticket-qr {
+    width: 100%;
+    max-width: 15rem;
+    margin-inline: auto;
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: #fff;
+}
+
+.ticket-qr svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+/* ==========================================================================
+   18. QR check-in
+   ========================================================================== */
+
+/* Scanner first, gate log beside it once there is room. On a phone at the
+   gate the scanner must be the first thing in reach. */
+.checkin-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+    align-items: start;
+}
+
+@media (min-width: 1024px) {
+    .checkin-layout {
+        grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    }
+}
+
+/* The three scanner states are driven entirely by data-state on the wrapper,
+   set by the script. Default is `unsupported`, so a browser with JavaScript
+   disabled or without a barcode decoder never shows a camera panel that
+   could not possibly work. */
+.scanner-viewport,
+.scanner-actions {
+    display: none;
+}
+
+.scanner[data-state='idle'] .scanner-actions,
+.scanner[data-state='error'] .scanner-actions,
+.scanner[data-state='scanning'] .scanner-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+}
+
+.scanner[data-state='scanning'] .scanner-viewport {
+    display: block;
+}
+
+.scanner[data-state='unsupported'] .scanner-unsupported {
+    display: block;
+}
+
+.scanner-unsupported {
+    display: none;
+}
+
+.scanner-viewport {
+    position: relative;
+    margin-bottom: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #000;
+}
+
+/* Capped height so a tall camera feed cannot push the result panel and the
+   manual form off screen. */
+.scanner-viewport video {
+    display: block;
+    width: 100%;
+    max-height: 60vh;
+    object-fit: cover;
+}
+
+.scanner-hint {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-inverse);
+    background: rgba(0, 0, 0, 0.6);
+}
+
+/* Reserves no space when empty, so the layout does not jump on first scan. */
+.scan-result:empty {
+    display: none;
+}
+
+.scan-result {
+    margin-top: var(--space-4);
+}
+
+.scan-result-name {
+    margin: var(--space-2) 0 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+}
+
+.scan-result-meta {
+    margin: var(--space-1) 0 0;
+    font-size: var(--font-size-sm);
+}
+
+.checkin-log {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.checkin-log-item {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.checkin-log-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.checkin-log-name {
+    margin: 0;
+    font-weight: var(--font-weight-semibold);
+}
+
+.checkin-log-meta {
+    margin: var(--space-1) 0 0;
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+/* ==========================================================================
+   19. Print
+   ========================================================================== */
+
+/* Printing the ticket page is the MVP's "download" path, so everything that
+   is not the ticket itself is removed from the output. */
+@media print {
+    .app-sidebar,
+    .app-topbar,
+    .app-sidebar-backdrop,
+    .skip-link,
+    .card-footer,
+    .alert,
+    .page-header-actions {
+        display: none !important;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    .app-content,
+    .page-shell {
+        padding: 0;
+    }
+
+    .card {
+        border: none;
+        box-shadow: none;
+    }
+
+    .ticket-qr {
+        border: none;
+        padding: 0;
+    }
+}
+
+/* ==========================================================================
+   20. Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
