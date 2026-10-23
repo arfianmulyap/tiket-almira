@@ -194,3 +194,4 @@ Sebelum hari acara:
 - Ekspor CSV/Excel belum menjadi komitmen MVP (pertanyaan 13).
 - Metode pembayaran aktif dan detail rekening/VA/QRIS belum dikonfirmasi
   (pertanyaan 1, 2, 16) — Phase 05C masih `BLOCKED`.
+<!-- test commit -->
