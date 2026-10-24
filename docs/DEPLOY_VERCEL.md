@@ -110,15 +110,44 @@ memicu error.
 
 ## 4. Build settings
 
-Project Settings → Build & Development Settings:
+Ketiga nilai ini **sudah dikunci di `vercel.json`**, jadi normalnya tidak perlu
+diubah di dashboard:
+
+```json
+"framework": null,
+"buildCommand": "composer run vercel",
+"outputDirectory": "public"
+```
+
+Jika dashboard sudah pernah menyimpan preset hasil deteksi otomatis, nilai
+dashboard **menang** atas `vercel.json`. Buka Project Settings → Build &
+Development Settings dan pastikan:
 
 - Framework Preset: **Other**
-- Build Command: `composer run vercel`
-- Output Directory: kosongkan
+- Build Command: `composer run vercel` (atau centang "Override" lalu kosongkan
+  agar memakai `vercel.json`)
+- Output Directory: `public`
 - Install Command: biarkan default
 
-`composer run vercel` menjalankan `npm ci` lalu `npm run build` untuk aset
-Vite. Runtime PHP memanggil script composer bernama `vercel` saat build.
+### Kenapa ketiganya wajib eksplisit
+
+Repo ini punya `vite.config.js` dan `package.json`, sehingga Vercel mendeteksi
+project sebagai **Vite** dan menjalankan static build miliknya sendiri, lalu
+mencari folder `dist`. Hasilnya:
+
+```
+[STATIC_BUILD_NO_OUT_DIR] No Output Directory named "dist" found
+```
+
+Kunci `functions` **tidak** mematikan deteksi framework — hanya `framework: null`
+yang mematikannya. `outputDirectory: "public"` memberi tahu Vercel di mana aset
+statis berada (`public/build`, `public/css`, `favicon.ico`), karena Vite di
+Laravel menulis ke `public/build`, bukan `dist`.
+
+`composer run vercel` menjalankan `npm install --ignore-scripts` lalu
+`npm run build`. Dipakai `npm install`, **bukan `npm ci`**, karena repo ini
+tidak memiliki `package-lock.json` dan `npm ci` gagal keras tanpa lockfile.
+Jika suatu saat lockfile di-commit, ganti ke `npm ci` agar build deterministik.
 
 Blade **tidak** di-cache saat build: `api/index.php` mengarahkan
 `VIEW_COMPILED_PATH` ke `/tmp`, jadi cache hasil build tidak akan terbaca.

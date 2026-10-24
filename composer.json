@@ -55,7 +55,7 @@
             "@php artisan test"
         ],
         "vercel": [
-            "npm ci --ignore-scripts",
+            "npm install --ignore-scripts --no-audit --no-fund",
             "npm run build"
         ],
         "post-autoload-dump": [
