@@ -108,6 +108,30 @@ TICKET_EMAIL_ENABLED=false
 menampilkan kredensial database dan kunci object storage ke siapa pun yang
 memicu error.
 
+### `LOG_CHANNEL=stderr` wajib — gejalanya halaman putih 500
+
+Ini bukan sekadar saran kebersihan. Filesystem di Vercel read-only, jadi
+channel `single`/`stack` mencoba menulis `storage/logs/laravel.log` dan gagal.
+Masalahnya logger dipanggil **oleh exception handler**, sehingga handler ikut
+melempar exception saat sedang melaporkan error — tidak ada yang dirender dan
+tidak ada yang tercatat. Hasilnya **HTTP 500 dengan halaman kosong** dan
+function log yang juga kosong, sehingga error aslinya tidak terlihat.
+
+Direproduksi dengan membuat `storage/logs` read-only:
+
+```
+LOG_CHANNEL=stack  -> UnexpectedValueException: The stream or file
+                      ".../logs/laravel.log" could not be opened in append
+                      mode: Failed to open stream: Permission denied
+LOG_CHANNEL=stderr -> aman, tidak melempar
+```
+
+Selain itu `api/index.php` memindahkan **seluruh** storage ke `/tmp` lewat
+`LARAVEL_STORAGE_PATH`, sehingga `storage_path()`, `view.compiled`,
+`session.files`, dan `cache.stores.file.path` semuanya mengarah ke lokasi yang
+bisa ditulis. Memindahkan `VIEW_COMPILED_PATH` saja **tidak cukup** — log,
+cache, dan session tetap menunjuk direktori read-only.
+
 ## 4. Build settings
 
 Ketiga nilai ini **sudah dikunci di `vercel.json`**, jadi normalnya tidak perlu

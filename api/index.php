@@ -18,42 +18,48 @@
 |
 */
 
-// Writable home for the compiled Blade templates.
+// Relocate the whole storage directory to /tmp.
 //
-// Views are compiled lazily here on the first request an instance serves,
-// rather than cached at build time. `view:cache` would write them into the
-// deployed, read-only storage/framework/views, which this path then overrides
-// — the pre-compiled files would never be read, so the build step would cost
-// time and provide nothing. Compiling on demand into /tmp is slower on a cold
-// start but is actually used, and warm invocations reuse it.
+// Every writable path the framework derives from storage_path() has to move,
+// not just one of them: logs (storage/logs), the file cache
+// (storage/framework/cache), file sessions (storage/framework/sessions) and
+// compiled Blade templates (storage/framework/views) all live there. The
+// deployed copy is read-only, so a single missed path is enough to break a
+// request.
 //
-// Set before the framework boots: config/view.php reads VIEW_COMPILED_PATH
-// while resolving configuration, and a value set afterwards is ignored.
-$compiled = '/tmp/storage/framework/views';
+// Getting this wrong fails in a particularly opaque way. When logging cannot
+// write its file, the exception handler throws *while reporting* the original
+// exception, so nothing is rendered and nothing is logged: the response is a
+// blank HTTP 500 with no Laravel error page and an empty function log.
+//
+// Application::storagePath() honours LARAVEL_STORAGE_PATH from $_ENV/$_SERVER,
+// which moves all of the above in one go. Read while resolving configuration,
+// so it must be set before the framework boots — a value assigned afterwards
+// is ignored.
+$storage = '/tmp/storage';
 
-if (! is_dir($compiled)) {
-    mkdir($compiled, 0755, true);
-}
-
-putenv("VIEW_COMPILED_PATH={$compiled}");
-$_ENV['VIEW_COMPILED_PATH'] = $compiled;
-$_SERVER['VIEW_COMPILED_PATH'] = $compiled;
-
-// Remaining framework directories. The app does not depend on these at
-// runtime (sessions and cache are in the database, logs go to stderr), but
-// they are created so any incidental write lands somewhere writable rather
-// than raising a permission error mid-request.
+// Views are compiled lazily on the first request an instance serves rather
+// than cached at build time. `view:cache` would write into the deployed,
+// read-only storage/framework/views, which this path then overrides, so the
+// pre-compiled files would never be read. Compiling on demand costs a slower
+// cold start but is actually used, and warm invocations reuse it.
 foreach ([
-    '/tmp/storage/framework/cache/data',
-    '/tmp/storage/framework/sessions',
-    '/tmp/storage/logs',
-    '/tmp/storage/app/private',
-    '/tmp/storage/app/public',
+    $storage.'/framework/views',
+    $storage.'/framework/cache/data',
+    $storage.'/framework/cache/locks',
+    $storage.'/framework/sessions',
+    $storage.'/logs',
+    $storage.'/app/private',
+    $storage.'/app/public',
 ] as $directory) {
     if (! is_dir($directory)) {
         mkdir($directory, 0755, true);
     }
 }
+
+putenv("LARAVEL_STORAGE_PATH={$storage}");
+$_ENV['LARAVEL_STORAGE_PATH'] = $storage;
+$_SERVER['LARAVEL_STORAGE_PATH'] = $storage;
 
 // Hand over to the application's own front controller.
 require __DIR__.'/../public/index.php';
