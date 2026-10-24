@@ -39,6 +39,44 @@ php artisan db:seed --class=AdminUserSeeder
 Pastikan `ADMIN_PASSWORD` di `.env` lokal sudah diganti dari `123` sebelum
 seeder dijalankan — password itu akan menjadi kredensial admin yang nyata.
 
+### TLS: tidak bisa diselesaikan hanya dengan environment variable
+
+Ketiga provider di atas mewajibkan koneksi terenkripsi, dan beberapa menolak
+koneksi yang tidak memverifikasi sertifikat. `config/database.php` menyediakan
+satu kaitan untuk ini:
+
+```php
+'options' => extension_loaded('pdo_mysql') ? array_filter([
+    Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+]) : [],
+```
+
+Masalahnya `ATTR_SSL_CA` menerima **path ke file**, bukan isi sertifikat.
+Environment variable di dashboard Vercel hanya bisa menyimpan string, jadi
+menempelkan isi PEM ke `MYSQL_ATTR_SSL_CA` tidak akan bekerja — PDO akan
+memperlakukannya sebagai nama file dan gagal membukanya.
+
+Perhatikan juga `array_filter()`: kalau `MYSQL_ATTR_SSL_CA` tidak diset,
+entri itu dibuang dan PDO tersambung **tanpa verifikasi sertifikat**. Itu
+bukan kegagalan yang terlihat, jadi jangan simpulkan "TLS aman" hanya karena
+koneksi berhasil.
+
+Dua jalan yang tersedia:
+
+1. **Commit CA bundle provider ke repo** (misal `storage/certs/ca.pem` yang
+   di-whitelist di `.vercelignore`), lalu set
+   `MYSQL_ATTR_SSL_CA=/var/task/user/storage/certs/ca.pem`. Path absolut di
+   dalam function perlu dikonfirmasi dulu dari log deploy — jangan diasumsikan.
+2. **Pakai provider yang verifikasinya cukup dengan CA sistem.** Container
+   lokal punya `/etc/ssl/certs/ca-certificates.crt` (terverifikasi,
+   182 KB), tapi **saya belum memverifikasi file itu ada di runtime
+   `vercel-php`**. Perlu dicek sebelum diandalkan.
+
+Belum ada yang saya bisa uji dari sini tanpa kredensial database sungguhan.
+Tes paling murah: setelah DB siap, jalankan `php artisan migrate --force`
+dari lokal. Kalau itu jalan tapi aplikasi di Vercel tetap gagal konek,
+penyebabnya hampir pasti CA path di atas, bukan kredensial.
+
 ## 2. Object storage (wajib agar upload berfungsi)
 
 Buat **dua bucket** S3-compatible. Cloudflare R2 punya free tier dan tanpa
@@ -80,6 +118,8 @@ DB_PORT=3306
 DB_DATABASE=...
 DB_USERNAME=...
 DB_PASSWORD=...
+MYSQL_ATTR_SSL_CA=        # path ke file CA, BUKAN isi PEM — lihat §1
+DB_TIMEZONE=+07:00        # offset numerik, bukan 'Asia/Jakarta'
 
 SESSION_DRIVER=database    # jangan `file`
 CACHE_STORE=database       # jangan `file`

@@ -1,0 +1,44 @@
+warning: in the working copy of '.vercelignore', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'IMPLEMENTATION_PLAN.md', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'NEW_AGENTS.md', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'api/php.ini', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'docs/DEPLOY_VERCEL.md', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'public/css/app.css', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/check-in/show.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/dashboard.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/events/_form.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/events/create.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/events/edit.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/events/index.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/events/show.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/orders/index.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/admin/orders/show.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/auth/login.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/alert.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/badge.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/button.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/card.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/empty-state.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/field-error.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/field.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/input.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/kpi.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/label.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/page-header.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/payment-instructions.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/select.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/components/textarea.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/layouts/admin.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/layouts/app.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/mail/ticket-issued.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/partials/flash.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/partials/head.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/participant/events/index.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/participant/events/show.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/participant/orders/show.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/participant/tickets/show.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'vercel.json', CRLF will be replaced by LF the next time Git touches it
+ docs/DEPLOY_VERCEL.md | 40 ++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+=== scratch files left ===
+none
