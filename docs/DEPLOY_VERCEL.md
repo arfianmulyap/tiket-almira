@@ -143,6 +143,45 @@ yang mematikannya. `outputDirectory: "public"` memberi tahu Vercel di mana aset
 statis berada (`public/build`, `public/css`, `favicon.ico`), karena Vite di
 Laravel menulis ke `public/build`, bukan `dist`.
 
+### Urutan `routes` itu kritis
+
+Efek samping `outputDirectory: "public"`: **seluruh** isi `public/` menjadi
+static output, termasuk `public/index.php`. Hanya `api/*.php` yang terdaftar
+sebagai function, sehingga `public/index.php` diperlakukan sebagai file biasa.
+Gejalanya browser **mengunduh blob** berisi source code PHP, bukan menampilkan
+website:
+
+```php
+<?php
+use Illuminate\Foundation\Application;
+...
+$app->handleRequest(Request::capture());
+```
+
+Ini kebocoran source code, bukan cuma tampilan rusak.
+
+Penyebabnya request `/` jatuh ke `handle: filesystem`, lalu directory-index
+Vercel menemukan `public/index.php` dan menyajikannya mentah. Route yang
+diletakkan **sebelum** `handle: filesystem` menang atas pencarian file statis,
+jadi `/` dan `/index.php` harus dialihkan eksplisit ke lambda:
+
+```json
+"routes": [
+    { "src": "/", "dest": "/api/index.php" },
+    { "src": "/index\\.php", "dest": "/api/index.php" },
+    { "src": "/\\.htaccess", "status": 404 },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/api/index.php" }
+]
+```
+
+Catch-all di akhir **tidak cukup**, karena `handle: filesystem` dievaluasi lebih
+dulu dan sudah menemukan file tersebut.
+
+`public/.htaccess` juga ikut ter-deploy dan Vercel **mengabaikan** aturan Apache
+di dalamnya (tidak ada mod_rewrite di sini — fungsinya digantikan `routes`).
+File itu diblokir 404 agar konfigurasi internal tidak terbaca publik.
+
 ### Kenapa `buildCommand` bukan `composer run vercel`
 
 Build container Vercel (tempat `buildCommand` dieksekusi) hanya punya

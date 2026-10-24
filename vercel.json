@@ -11,7 +11,9 @@
         }
     },
     "routes": [
+        { "src": "/", "dest": "/api/index.php" },
         { "src": "/index\\.php", "dest": "/api/index.php" },
+        { "src": "/\\.htaccess", "status": 404 },
         { "handle": "filesystem" },
         { "src": "/(.*)", "dest": "/api/index.php" }
     ],
