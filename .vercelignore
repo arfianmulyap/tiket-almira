@@ -5,8 +5,11 @@
 /vendor
 /node_modules
 
-# Built during the build step by `npm run build`.
-/public/build
+# NOTE: /public/build is intentionally NOT excluded here. `.vercelignore` only
+# filters the *upload*; Vercel's build step regenerates public/build via
+# buildCommand and serves it from outputDirectory. Listing it caused no harm
+# before, but keeping it out avoids any chance of the local build output
+# shadowing the fresh one.
 
 # A symlink to storage/app/public. Meaningless on a read-only filesystem, and
 # posters are served from object storage instead (POSTER_DISK).

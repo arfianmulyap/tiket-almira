@@ -115,7 +115,7 @@ diubah di dashboard:
 
 ```json
 "framework": null,
-"buildCommand": "composer run vercel",
+"buildCommand": "npm install --ignore-scripts --no-audit --no-fund && npm run build",
 "outputDirectory": "public"
 ```
 
@@ -124,8 +124,7 @@ dashboard **menang** atas `vercel.json`. Buka Project Settings → Build &
 Development Settings dan pastikan:
 
 - Framework Preset: **Other**
-- Build Command: `composer run vercel` (atau centang "Override" lalu kosongkan
-  agar memakai `vercel.json`)
+- Build Command: biarkan memakai `vercel.json` (jangan isi `composer ...`)
 - Output Directory: `public`
 - Install Command: biarkan default
 
@@ -144,10 +143,36 @@ yang mematikannya. `outputDirectory: "public"` memberi tahu Vercel di mana aset
 statis berada (`public/build`, `public/css`, `favicon.ico`), karena Vite di
 Laravel menulis ke `public/build`, bukan `dist`.
 
-`composer run vercel` menjalankan `npm install --ignore-scripts` lalu
-`npm run build`. Dipakai `npm install`, **bukan `npm ci`**, karena repo ini
-tidak memiliki `package-lock.json` dan `npm ci` gagal keras tanpa lockfile.
-Jika suatu saat lockfile di-commit, ganti ke `npm ci` agar build deterministik.
+### Kenapa `buildCommand` bukan `composer run vercel`
+
+Build container Vercel (tempat `buildCommand` dieksekusi) hanya punya
+**Node.js**, tidak punya PHP maupun Composer. Memakai `composer run vercel`
+menghasilkan:
+
+```
+sh: line 1: composer: command not found
+Error: [BUILD_UTILS_SPAWN_127] Command "composer run vercel" exited with 127
+```
+
+PHP dan Composer baru tersedia di dalam build step runtime `vercel-php`, yang
+jalan terpisah dan **otomatis menjalankan `composer install`** untuk `vendor/`.
+Jadi pembagian tugasnya:
+
+| Tahap | Dijalankan oleh | Tugas |
+| --- | --- | --- |
+| `buildCommand` | build container (Node) | `npm install` + `npm run build` → `public/build` |
+| runtime `vercel-php` | build step function | `composer install` → `vendor/` |
+
+Karena itu script composer `vercel` **dihapus** dari `composer.json`. Selain
+tidak terpakai, aset yang dibuat di dalam build step runtime tidak bisa diakses
+browser — per FAQ runtime: *"Files created during `composer run vercel` script
+can be used (require/include) in your PHP lambdas, but can't be accessed from
+browser (like assets)."* Aset Vite wajib dibuat di `buildCommand` agar masuk
+`outputDirectory` dan tersaji statis.
+
+Dipakai `npm install`, **bukan `npm ci`**, karena repo ini tidak memiliki
+`package-lock.json` dan `npm ci` gagal keras tanpa lockfile. Jika suatu saat
+lockfile di-commit, ganti ke `npm ci` agar build deterministik.
 
 Blade **tidak** di-cache saat build: `api/index.php` mengarahkan
 `VIEW_COMPILED_PATH` ke `/tmp`, jadi cache hasil build tidak akan terbaca.
