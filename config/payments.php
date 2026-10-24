@@ -26,10 +26,17 @@ return [
         'max_kilobytes' => 4096,
         'mimes' => ['jpg', 'jpeg', 'png', 'webp'],
 
-        // Private disk. FILESYSTEM_DISK defaults to `local`, whose root is
+        // Private disk. Defaults to `local`, whose root is
         // storage/app/private, so proofs are never reachable over HTTP and
         // are only streamed by an authorised controller.
-        'disk' => 'local',
+        //
+        // Env-driven because a serverless host has no persistent local
+        // filesystem: on Vercel the only writable path is /tmp and it is
+        // discarded when the function instance ends, which would lose a proof
+        // that OPERATIONS.md records as impossible to recreate. Set
+        // PAYMENT_PROOF_DISK=s3_private there. Whatever the value, the disk
+        // must stay private — a proof must never be readable by URL.
+        'disk' => env('PAYMENT_PROOF_DISK', 'local'),
         'directory' => 'payment-proofs',
     ],
 
@@ -61,6 +68,30 @@ return [
     | here so the intent is explicit rather than silently assumed.
     |
     */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allow placeholder methods outside local and testing
+    |--------------------------------------------------------------------------
+    |
+    | PaymentMethodRegistry hides dummy methods outside local and testing so
+    | placeholder account numbers can never be shown to a participant as a real
+    | instruction. That is the right default and must stay the default.
+    |
+    | This flag is a deliberate escape hatch for an internal deployment that
+    | nobody outside the team can reach, where the point is to exercise the
+    | ordering and upload flow end to end. There is nothing to exercise with no
+    | selectable method.
+    |
+    | It does not suppress the visible "Mode pengembangan" warning, so the page
+    | still states plainly that the data is an example and no transfer should be
+    | made. Set PAYMENTS_ALLOW_DUMMY=false before real participants are given
+    | the URL; Phase 05C replaces the entries below with confirmed data and
+    | makes the flag unnecessary.
+    |
+    */
+
+    'allow_dummy' => env('PAYMENTS_ALLOW_DUMMY', false),
 
     'scope' => 'global',
 

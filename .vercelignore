@@ -1,0 +1,53 @@
+# Files excluded from the upload to Vercel.
+#
+# Dependencies are installed during the build, so shipping them would only
+# slow the upload and risk mixing platform-specific builds.
+/vendor
+/node_modules
+
+# Built during the build step by `npm run build`.
+/public/build
+
+# A symlink to storage/app/public. Meaningless on a read-only filesystem, and
+# posters are served from object storage instead (POSTER_DISK).
+/public/storage
+
+# Local runtime state. Never deploy a local .env: environment variables are
+# configured in the Vercel project instead, and this file holds development
+# credentials.
+.env
+.env.backup
+.env.production
+/storage/logs
+/storage/framework/cache
+/storage/framework/sessions
+/storage/framework/views
+/storage/app/public/posters
+/storage/app/private
+/storage/pail
+
+# bootstrap/cache is intentionally NOT excluded. The build writes the config
+# and view caches into it, and excluding the directory would leave the build
+# with nowhere to put them.
+
+# Tests and tooling are not needed to serve a request.
+/tests
+phpunit.xml
+.phpunit.result.cache
+/.phpunit.cache
+
+# Local tooling and editor state.
+/.git
+/.github
+/.vscode
+/.idea
+/.cursor
+/.codex
+/.zed
+/.nova
+/docker
+docker-compose.yml
+Dockerfile
+_ide_helper.php
+.phpactor.json
+auth.json

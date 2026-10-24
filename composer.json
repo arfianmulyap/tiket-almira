@@ -12,7 +12,8 @@
         "php": "^8.3",
         "bacon/bacon-qr-code": "^3.0",
         "laravel/framework": "^13.17",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "league/flysystem-aws-s3-v3": "^3.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -52,6 +53,10 @@
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
+        ],
+        "vercel": [
+            "npm ci --ignore-scripts",
+            "npm run build"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

@@ -22,6 +22,15 @@ use Illuminate\Support\Collection;
  * config before deploying, the guard is in code: in production the dummy
  * entries vanish and the UI falls back to an honest "not yet available"
  * state.
+ *
+ * An internal, non-public deployment is the one case where that guard is too
+ * strict: the whole point of such a deployment is to exercise the ordering and
+ * upload flow end to end, which is impossible with no selectable method. The
+ * PAYMENTS_ALLOW_DUMMY escape hatch below covers it. It is opt-in, defaults to
+ * off, and does not suppress the "Mode pengembangan / Jangan melakukan
+ * transfer" warning the UI renders for dummy data, so a participant who
+ * somehow reaches the page is still told plainly not to send money. Never
+ * enable it on a deployment real participants can reach.
  */
 class PaymentMethodRegistry
 {
@@ -109,9 +118,18 @@ class PaymentMethodRegistry
 
     /**
      * Whether this environment may display placeholder payment data.
+     *
+     * Local and testing always may. Any other environment may only when
+     * explicitly opted in via PAYMENTS_ALLOW_DUMMY, which exists for internal
+     * deployments that need a selectable method to exercise the flow. The
+     * default is false, so forgetting to set it fails closed.
      */
     private function allowsDummyData(): bool
     {
-        return in_array(app()->environment(), self::DUMMY_ENVIRONMENTS, true);
+        if (in_array(app()->environment(), self::DUMMY_ENVIRONMENTS, true)) {
+            return true;
+        }
+
+        return (bool) config('payments.allow_dummy', false);
     }
 }

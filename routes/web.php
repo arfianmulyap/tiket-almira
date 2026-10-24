@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PaymentProofController as AdminPaymentProofController;
 use App\Http\Controllers\Admin\PaymentVerificationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\CronController;
 use App\Http\Controllers\Participant\EventController as ParticipantEventController;
 use App\Http\Controllers\Participant\OrderController;
 use App\Http\Controllers\Participant\PaymentProofController;
@@ -46,6 +47,24 @@ Route::post('orders/{token}/payment-proof', [PaymentProofController::class, 'sto
 // Guarded by the order's access token, not by the QR token: the QR token is
 // the scanner's credential and must not travel in a browser URL.
 Route::get('tickets/{token}', [TicketController::class, 'show'])->name('tickets.show');
+
+/*
+|--------------------------------------------------------------------------
+| Scheduler endpoint
+|--------------------------------------------------------------------------
+|
+| Runs the overdue-order sweep over HTTP, for hosts with no always-on process
+| to run `schedule:run` (PRD FR-08). Authorised inside the controller by a
+| shared secret and returns 404 when no secret is configured, so it is inert
+| unless deliberately enabled.
+|
+| Outside the admin group on purpose: the caller is a scheduler, not a logged
+| in admin, and it holds a secret rather than a session.
+|
+*/
+
+Route::get('cron/expire-overdue-orders', [CronController::class, 'expireOverdueOrders'])
+    ->name('cron.expire-overdue-orders');
 
 /*
 |--------------------------------------------------------------------------

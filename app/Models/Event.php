@@ -142,6 +142,11 @@ class Event extends Model
 
     /**
      * Public URL of the poster, or null when no poster has been uploaded.
+     *
+     * The disk is read from config rather than hardcoded so the URL follows
+     * the poster to wherever it is actually stored: the local public disk in
+     * development, or an object storage bucket in an environment with no
+     * persistent filesystem. EventPosterService writes to the same disk.
      */
     public function posterUrl(): ?string
     {
@@ -149,6 +154,7 @@ class Event extends Model
             return null;
         }
 
-        return Storage::disk('public')->url($this->poster_path);
+        return Storage::disk(config('filesystems.poster_disk', 'public'))
+            ->url($this->poster_path);
     }
 }
