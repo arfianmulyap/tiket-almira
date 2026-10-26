@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Enums\AdminAccountStatus;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -28,13 +30,32 @@ class AdminUserSeeder extends Seeder
             return;
         }
 
+        // An admin without a role would authenticate but hold no permission,
+        // so the seeder refuses to create one (Phase 10).
+        $superAdminRole = Role::query()->where('is_super_admin', true)->first();
+
+        if ($superAdminRole === null) {
+            $this->command?->warn(
+                'AdminUserSeeder skipped: the Super Admin role is missing. Run the RolePermissionSeeder first.'
+            );
+
+            return;
+        }
+
         $user = User::firstOrNew(['email' => $email]);
         $user->name = env('ADMIN_NAME', 'Admin Almira');
         $user->password = Hash::make($password);
         $user->is_admin = true;
+
+        // Re-running the seeder must also repair an account that was
+        // deactivated or left waiting for an invitation (Phase 11).
+        $user->status = AdminAccountStatus::Active;
+        $user->deactivated_at = null;
+
+        $user->role_id = $superAdminRole->getKey();
         $user->email_verified_at ??= now();
         $user->save();
 
-        $this->command?->info("Admin account ready for {$email}.");
+        $this->command?->info("Admin account ready for {$email} with role {$superAdminRole->name}.");
     }
 }

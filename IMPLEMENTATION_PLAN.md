@@ -205,13 +205,13 @@ Phase 04–05.
 
 ---
 
-## Testing Policy — Phase 07, 08, and 09
+## Testing Policy — Phase 07, 08, 09, 10, 11, 12, 13, 14.
 
 ### Objective
 Prioritize implementation progress and manual QA over automated testing for Phases 07, 08, and 09.
 
 ### Rules
-1. Do NOT create unit tests, feature tests, integration tests, browser tests, or end-to-end tests for Phase 07, Phase 08, or Phase 09.
+1. Do NOT create unit tests, feature tests, integration tests, browser tests, or end-to-end tests for Phase 07, Phase 08, Phase 09, Phase 10. Phase 11, Phase 12, Phase 13, and Phase 14.
 2. Do NOT run automated test suites such as `php artisan test`, PHPUnit, Pest, or other automated testing commands during these phases.
 3. Do NOT spend time creating, updating, debugging, or fixing automated tests for these phases.
 4. Do NOT block phase completion because automated tests are missing or have not been executed.
@@ -328,6 +328,270 @@ Memastikan sistem dapat digunakan secara operasional dan alur kritis telah diuji
 
 ### Dependencies
 Phase 03–08.
+
+---
+
+## 10
+
+### Role & Permission Management
+
+**Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
+
+Prioritas pertama
+
+Membangun fondasi sistem hak akses.
+
+- CRUD role dan permission per tindakan.
+- Satu role untuk setiap admin.
+- Role Super Admin permanen dan terlindungi.
+- Perubahan permission berlaku pada request berikutnya.
+- Proteksi backend dan audit terhadap perubahan akses.
+
+Selesai jika: akses menu dan setiap tindakan backend mengikuti permission terbaru.
+
+## 11
+
+### Admin Account & Invitation
+
+**Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
+
+Pengelolaan akun dan profil admin.
+
+- Undangan admin melalui email.
+- Token sekali pakai, berlaku 24 jam.
+- Pembuatan password oleh penerima undangan.
+- Aktivasi, penonaktifan, dan aktivasi ulang akun.
+- Profil admin: ubah nama dan password.
+- Pencabutan sesi akun yang dinonaktifkan.
+- Akun Super Admin terakhir tidak boleh dinonaktifkan.
+
+Selesai jika: akun baru hanya aktif setelah undangan diterima dan akun nonaktif tidak dapat menggunakan dashboard.
+
+Catatan implementasi:
+
+- Status akun disimpan di `users.status` (`invited`, `active`, `inactive`).
+  Akun undangan tidak memiliki password (`users.password` nullable), sehingga
+  tidak dapat login sebelum undangan diterima.
+- Token undangan disimpan sebagai hash SHA-256 di `admin_invitations`; tautan
+  asli hanya ada di email. Menerbitkan ulang undangan mencabut tautan lama.
+- Permission baru: `admin-accounts.view` dan `admin-accounts.manage`. Role
+  Super Admin otomatis memilikinya; role lain harus diberikan lewat layar Role
+  (Phase 10).
+- Akun nonaktif dicabut sesinya (baris `sessions` dihapus) dan ditolak middleware
+  `admin` pada request berikutnya.
+- Pengaman tambahan: admin tidak dapat menonaktifkan akun sendiri, dan hanya
+  Super Admin yang dapat menugaskan atau mengundang ulang akun Super Admin.
+- Profil (`/admin/profile`) bersifat self-service: tidak memerlukan permission
+  akun, tetapi perubahan password mewajibkan password saat ini.
+- Email undangan dikirim sinkron; kegagalan pengiriman dicatat ke log dan tidak
+  membatalkan akun. Status pengiriman, retry, dan template email transaksional
+  penuh tetap menjadi scope Phase 13.
+
+
+## 12
+
+### Payment Settings & Audit Log
+
+**Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
+
+Mengatur metode pembayaran dan jejak aktivitas.
+
+- Admin yang berizin dapat toggle metode pembayaran.
+- Hanya Super Admin dapat mengubah detail rekening, VA, dan QRIS.
+- Pesanan lama mempertahankan snapshot instruksi pembayaran.
+- Audit log hanya dapat diakses Super Admin.
+- Catat perubahan konfigurasi, role, verifikasi pembayaran, dan aktivitas penting lainnya.
+
+Selesai jika: perubahan konfigurasi tidak mengubah instruksi pembayaran pesanan lama.
+
+Catatan implementasi:
+
+- Katalog metode pembayaran sekarang disimpan di tabel `payment_methods`
+  (migrasi `2026_10_26_000002_create_payment_methods_table`). Selama tabel
+  masih kosong, `PaymentMethodRegistry` membaca `config/payments.php` seperti
+  Phase 05, sehingga instalasi lama tetap berjalan. `PaymentMethodSeeder`
+  menyalin katalog config ke tabel secara idempotent (`firstOrCreate`), jadi
+  perubahan yang dibuat lewat panel tidak tertimpa saat deploy berikutnya.
+- Permission baru: `payment-methods.view` dan `payment-methods.manage`.
+  Melihat daftar dan toggle aktif/nonaktif mengikuti permission tersebut.
+  Mengubah detail rekening/VA/QRIS — termasuk menghapus penanda data contoh —
+  hanya untuk role Super Admin dan diperiksa lewat policy, bukan permission
+  yang bisa diberikan ke role lain.
+- Metode bertanda `is_dummy` hanya ditawarkan di environment `local` dan
+  `testing`; di production metode tersebut tidak muncul sama sekali sampai
+  Super Admin mengisi detail resmi dan menghapus centangnya. Ini menjaga
+  pertanyaan PRD 1, 2, dan 16 tetap terbuka tanpa menampilkan instruksi palsu.
+- Pesanan menyimpan `orders.payment_instructions_snapshot` saat dibuat
+  (`OrderService`). Halaman status pesanan dan form unggah bukti membaca
+  snapshot itu lewat `PaymentMethodRegistry::forOrder()`, sehingga perubahan
+  konfigurasi hanya memengaruhi pesanan baru. Metode yang sudah dinonaktifkan
+  tetap dapat dipakai menyelesaikan pembayaran pesanan lama. Migrasi mengisi
+  snapshot pesanan lama dari katalog yang aktif saat migrasi dijalankan.
+- Toggle bersifat non-destruktif: tidak ada hapus metode, hanya aktif/nonaktif,
+  agar `payments.method` dan snapshot lama tetap dapat ditelusuri.
+- Audit log read-only dan hanya dapat dibuka Super Admin (`AuditLogPolicy`),
+  tanpa permission yang bisa diberikan. `/admin/audit-logs` mendukung filter
+  tindakan, pelaku, dan rentang tanggal, plus halaman detail. Tidak ada route
+  create, update, atau delete.
+- Aksi baru yang dicatat: `payment.method_updated`,
+  `payment.method_activated`, `payment.method_deactivated`. Aksi Phase 07
+  (`payment.*`), Phase 08 (`ticket.*`), Phase 10 (`role.*`, `permission.*`),
+  dan Phase 11 (`admin.*`) masuk trail yang sama.
+- Belum ada formulir tambah metode: `key` sengaja tidak dapat diubah karena
+  dipakai `payments.method` dan snapshot. Metode baru masih lewat
+  `config/payments.php` + `PaymentMethodSeeder`. Daftar final metode dan
+  detail rekening/VA/QRIS tetap menunggu keputusan bisnis.
+
+## 13
+
+### Email Notification & PDF E-ticket
+
+**Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
+
+Mengembangkan email transaksional menggunakan Laravel Mail.
+
+- Email undangan admin.
+- Email e-ticket dalam bentuk lampiran PDF.
+- PDF memuat detail event dan QR token tiket yang sama dengan database.
+- Tombol Kirim Ulang Tiket pada detail pesanan.
+- Status pengiriman, retry, dan pencatatan hasil.
+- Permission khusus untuk mengirim ulang tiket.
+
+Selesai jika: email dapat dikirim ulang tanpa membuat tiket atau QR baru.
+
+Catatan implementasi:
+
+- Tabel baru `email_deliveries` (migrasi
+  `2026_10_26_000004_create_email_deliveries_table`) mencatat **setiap** percobaan
+  pengiriman email transaksional, baik e-ticket maupun undangan admin. Satu baris
+  per percobaan bersifat append-only: kirim ulang menambah baris baru, bukan
+  menimpa yang gagal, sehingga urutan "gagal lalu berhasil" tetap terbaca.
+  Kolomnya: `emailable_type`/`emailable_id` (morph), `recipient_email`, `status`
+  (`SENT`/`FAILED`/`SKIPPED`), `error_message`, `sent_by`, `created_at`.
+- `EmailDeliveryStatus` membedakan tiga hasil. `SKIPPED` berarti email memang
+  belum diaktifkan (`TICKET_EMAIL_ENABLED=false`), bukan kegagalan; tanpa
+  pembedaan itu setiap pesanan pada instalasi tanpa layanan email akan tampak
+  "gagal dikirim" dan operator akan mengabaikannya. `EmailDeliveryLogger`
+  dibentuk seperti `AuditLogger`: penulisannya di luar transaksi pemanggil dan
+  tidak pernah melempar exception, karena PRD FR-09 mewajibkan kegagalan email
+  tidak membatalkan tiket yang sah.
+- PDF dibuat tanpa dependency baru. `bacon/bacon-qr-code` sudah ada untuk QR di
+  halaman tiket, dan matriks modulnya digambar sebagai vektor di dalam PDF 1.4
+  yang disusun langsung oleh `TicketPdfRenderer` (font base-14 Helvetica,
+  encoding Windows-1252). Tidak ada pustaka PDF yang ditambahkan, tidak ada font
+  yang di-embed, dan berkasnya hanya beberapa kilobyte. Konsekuensinya teks
+  dikonversi ke Windows-1252: huruf beraksen ditransliterasi dan karakter di
+  luar set tersebut (mis. emoji atau aksara non-Latin) tidak muncul di PDF.
+  Bila bisnis nanti menuntut tata letak berbasis HTML/CSS, penggantian ke
+  pustaka seperti dompdf adalah keputusan terpisah karena menambah dependency.
+- PDF berisi nama event, kode pesanan, nama peserta, waktu, lokasi, status tiket,
+  waktu terbit, dan QR berisi `tickets.qr_token` — nilai yang sama yang
+  divalidasi scanner. Tidak ada data pribadi di dalam QR (PRD FR-09). PDF
+  dirender per permintaan dari database, tidak disimpan, sehingga tidak ada
+  salinan usang yang bisa menyimpang dari status tiket sebenarnya.
+- `TicketIssuedMail` sekarang melampirkan PDF dan tetap menyertakan tautan
+  halaman tiket. `TicketMailer::send()` mengembalikan `EmailDelivery`, bukan
+  boolean, sehingga pemanggil dapat membedakan terkirim, gagal, dan dilewati.
+- Kirim ulang: route `POST /admin/orders/{order}/ticket-email`
+  (`admin.orders.ticket-email`) memakai tiket dan QR yang sudah ada; alur ini
+  tidak pernah menyentuh `TicketIssuanceService`, jadi tidak mungkin membuat
+  tiket kedua. Otorisasinya `OrderPolicy::resendTicket` (permission baru
+  `tickets.resend`, grup "Tiket") dan mensyaratkan tiket sudah ada. Setiap kirim
+  ulang menulis audit `ticket.email_resent` berisi penerima dan hasilnya.
+- Halaman detail pesanan menampilkan kartu **Email E-Ticket**: penerima, status
+  percobaan terakhir, pesan error bila gagal, lima percobaan terakhir, dan tombol
+  **Kirim Ulang Tiket** (hanya bila berizin). Bila email belum diaktifkan,
+  muncul peringatan bahwa peserta masih dapat membuka tiket dari halaman status.
+- Undangan admin (Phase 11) kini ikut tercatat. Daftar **Akun Admin** menampilkan
+  badge status pengiriman terakhir pada kolom Undangan, dan pesan sukses/gagal
+  pada pembuatan maupun kirim ulang undangan tetap seperti sebelumnya.
+- Halaman tiket peserta mendapat tombol **Unduh PDF**
+  (`GET /tickets/{token}/pdf`, `tickets.pdf`) dengan token akses yang sama seperti
+  halaman tiket. Tombol cetak lama tetap ada.
+- Retry masih manual (tombol kirim ulang). Pengiriman otomatis lewat queue,
+  penjadwalan retry, dan batas jumlah percobaan belum dibuat: `QUEUE_CONNECTION`
+  sudah `database` tetapi worker tidak dijalankan pada MVP, dan kebijakan retry
+  otomatis belum ditetapkan bisnis. Semua percobaan tetap tercatat sehingga
+  keputusan itu nanti tidak kehilangan data.
+
+
+## 14
+
+### WhatsApp Notification Integration
+
+**Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
+
+Integrasi gateway pihak ketiga dengan arsitektur yang fleksibel.
+
+- Reminder pada menit ke-30 dan ke-50.
+- Link aman menuju halaman status pesanan.
+- Reminder hanya jika bukti pembayaran belum diunggah.
+- Reminder berhenti setelah bukti diunggah atau pesanan tidak lagi valid.
+- Notifikasi pembayaran berhasil dan informasi tiket dikirim melalui email.
+- Retry terbatas, status pengiriman, dan pencegahan duplikasi pesan.
+
+Selesai jika: pesan mengikuti status pesanan terbaru dan tidak mengirim reminder yang sudah tidak relevan.
+
+Catatan implementasi:
+
+- Tabel baru `whatsapp_deliveries` (migrasi
+  `2026_10_26_000005_create_whatsapp_deliveries_table`) menyimpan satu baris per
+  pesanan per tahap pengingat. Unique index `(order_id, kind)` adalah pengaman
+  duplikasi; `attempts`, `status`, `driver`, `error_message`, dan `sent_at`
+  adalah status pengiriman yang dibaca operator. Berbeda dengan
+  `email_deliveries` yang append-only, baris di sini diperbarui selama percobaan
+  ulang karena satu tahap hanya boleh menghasilkan satu pesan.
+- Arsitektur gateway: `App\Services\WhatsApp\WhatsAppGateway` adalah kontrak
+  tunggal; driver dipilih lewat `config/whatsapp.php`. Provider WhatsApp belum
+  ditetapkan bisnis (PRD section 5), jadi satu-satunya driver yang dikirim adalah
+  `log`. Driver itu tidak menghubungi provider mana pun, hanya menulis pesan ke
+  log dan mencatat `driver=log`, sehingga QA dapat menguji seluruh alur tanpa
+  kredensial. Menambahkan provider nyata = satu class adapter + satu entri
+  config, tanpa mengubah service.
+- `WhatsAppReminderService` hanya membuat pengingat untuk pesanan
+  `PENDING_PAYMENT` yang belum punya baris `payments`, belum lewat `expires_at`,
+  dan sudah berumur 30/50 menit. Jika scheduler terlambat, hanya tahap terbaru
+  yang berlaku: pesanan yang baru terlihat pada menit ke-55 hanya menerima
+  pengingat menit ke-50, dan baris menit ke-30 ditutup `SKIPPED`. Pesanan yang
+  sudah punya bukti, sudah diputuskan, atau sudah kedaluwarsa tidak pernah
+  dikirimi pengingat.
+- Pengingat berjalan lewat command `whatsapp:send-payment-reminders` yang
+  dijadwalkan setiap menit (`routes/console.php`, `withoutOverlapping`).
+  Percobaan diklaim dengan `UPDATE ... WHERE attempts = ...` sebelum gateway
+  dipanggil, sehingga dua proses tidak dapat mengirim baris yang sama. Retry
+  otomatis dibatasi `WHATSAPP_MAX_ATTEMPTS` (default 3) dan hanya berjalan
+  selama pesanan masih relevan; tidak ada tombol kirim ulang manual untuk
+  pengingat.
+- Pesan memakai tautan `orders/{access_token}` (halaman status), bukan token QR.
+  Token QR tetap hanya untuk scanner check-in. Notifikasi pembayaran berhasil
+  dan e-ticket tetap dikirim lewat email Phase 13; Phase 14 tidak menambah pesan
+  WhatsApp untuk pesanan yang sudah dibayar.
+- Detail pesanan admin mendapat kartu **Pengingat WhatsApp** berisi penerima,
+  status setiap tahap, jumlah percobaan, driver, waktu kirim, dan alasan
+  `SKIPPED`/gagal. Tidak ada permission baru karena pengingat sepenuhnya
+  otomatis.
+- Default `WHATSAPP_ENABLED=false`. Mengaktifkannya dengan driver `log` hanya
+  untuk QA lokal/staging. Adapter provider nyata, kredensial, redaksi pesan
+  resmi, kebijakan opt-out, dan pengiriman lewat queue masih menunggu keputusan
+  bisnis.
+- Sesuai Testing Policy, tidak ada automated test baru untuk Phase 14.
+  Verifikasi dilakukan lewat migration, `schedule:list`, kompilasi Blade, Pint,
+  dan QA manual.
+
+
+## 15
+
+### Integration Review & Manual QA
+
+Memastikan seluruh improvement bekerja bersama.
+
+- Periksa alur role, undangan, pembayaran, email, dan WhatsApp.
+- Siapkan checklist QA manual dengan langkah dan hasil yang diharapkan.
+- Periksa log, konfigurasi, dan kegagalan pengiriman.
+- Dokumentasikan isu yang belum selesai.
+- Tidak membuat unit test otomatis untuk fase ini jika kamu ingin kebijakan tanpa automated testing diterapkan juga pada task improvement.
+
+Selesai jika: kamu dapat menjalankan checklist QA manual dan menyetujui hasilnya.
 
 ---
 

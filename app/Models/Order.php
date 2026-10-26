@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -40,6 +41,10 @@ class Order extends Model
             'expires_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'ticket_price_snapshot' => 'integer',
+            // Frozen at creation: the methods and instructions this
+            // participant was shown (Phase 12). Later settings changes must
+            // not rewrite them.
+            'payment_instructions_snapshot' => 'array',
         ];
     }
 
@@ -95,6 +100,20 @@ class Order extends Model
     public function auditLogs(): MorphMany
     {
         return $this->morphMany(AuditLog::class, 'auditable');
+    }
+
+    /**
+     * Scheduled WhatsApp payment reminders for this order (Phase 14).
+     *
+     * At most one row per reminder stage, enforced by a unique index on
+     * (order_id, kind). The relation lets the admin screen show delivery
+     * status without a query per stage.
+     *
+     * @return HasMany<WhatsAppDelivery, $this>
+     */
+    public function whatsappDeliveries(): HasMany
+    {
+        return $this->hasMany(WhatsAppDelivery::class);
     }
 
     /**

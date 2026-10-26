@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -46,11 +47,37 @@ class UserFactory extends Factory
 
     /**
      * Indicate that the user may access the admin panel.
+     *
+     * The account flag alone is not enough from Phase 10 onward: the panel
+     * refuses a role-less admin and every policy reads the role's permissions,
+     * so the state also attaches the permanent Super Admin role.
      */
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
             'is_admin' => true,
-        ]);
+        ])->afterCreating(function (User $user): void {
+            $user->assignRole($this->superAdminRole());
+        });
+    }
+
+    /**
+     * The protected Super Admin role, created on demand so the factory also
+     * works on a database seeded without RolePermissionSeeder.
+     */
+    private function superAdminRole(): Role
+    {
+        $role = Role::query()->where('is_super_admin', true)->first();
+
+        if ($role !== null) {
+            return $role;
+        }
+
+        $role = new Role;
+        $role->name = 'Super Admin';
+        $role->is_super_admin = true;
+        $role->save();
+
+        return $role;
     }
 }

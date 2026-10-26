@@ -45,16 +45,22 @@ return [
     | Payment methods
     |--------------------------------------------------------------------------
     |
-    | Single source of truth for the methods offered and the instructions
-    | shown (PRD FR-05: "Instruksi disimpan sebagai konfigurasi, bukan
-    | tersebar di kode").
+    | Seed catalog for the `payment_methods` table (Phase 12).
+    |
+    | Runtime reads the table, not this file, so an authorised admin can
+    | toggle a method or maintain its recipient details without a deployment
+    | (PRD FR-05: "Instruksi disimpan sebagai konfigurasi, bukan tersebar di
+    | kode"). PaymentMethodSeeder copies the entries below into the table
+    | once; afterwards this file is only consulted to introduce a brand-new
+    | method.
     |
     | NOTHING HERE IS REAL. The active method list and the account, VA, and
     | QRIS merchant details are unanswered business questions (PRD section 15
     | questions 1 and 2), so no account number has been invented. Every entry
     | below is development scaffolding, flagged by `is_dummy`, and
     | PaymentMethodRegistry refuses to serve dummy methods outside local and
-    | testing environments. Phase 05C replaces these with official data.
+    | testing environments. A Super Admin replaces them with official data on
+    | the payment settings screen and then clears the dummy flag.
     |
     | Fields:
     |   label        Shown in the method picker.

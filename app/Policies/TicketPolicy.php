@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\AdminPermission;
 use App\Models\Ticket;
 use App\Models\User;
 
@@ -10,10 +11,10 @@ use App\Models\User;
  *
  * The admin panel already sits behind the `auth` and `admin` middleware, but
  * every ability is still checked per action so authorisation never depends on
- * route configuration alone. MVP assumes a single admin role (PRD section 4),
- * so each ability maps to the same check; they are kept separate because a
- * gate-officer role that may scan but not manage events is the most likely
- * next change (PRD section 4 leaves that open).
+ * route configuration alone. Both abilities map to the same check-in
+ * permission (Phase 10) because the scanner screen and the admission it
+ * performs are one operational capability; the methods stay separate so a
+ * read-only gate log can be split out later without touching the routes.
  */
 class TicketPolicy
 {
@@ -25,7 +26,7 @@ class TicketPolicy
      */
     public function checkIn(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermission(AdminPermission::CheckInPerform);
     }
 
     /**
@@ -33,7 +34,7 @@ class TicketPolicy
      */
     public function viewCheckIns(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermission(AdminPermission::CheckInPerform);
     }
 
     /**
@@ -43,7 +44,9 @@ class TicketPolicy
      * atau mereset check-in?") is unanswered, and reversing an admission is
      * exactly the kind of destructive action that must not be invented: it
      * would let one ticket admit two people. The ability exists so the
-     * decision has an obvious home once it is made.
+     * decision has an obvious home once it is made. No permission can enable
+     * it, including Super Admin, because this is a business decision rather
+     * than an access decision.
      */
     public function resetCheckIn(User $user, Ticket $ticket): bool
     {

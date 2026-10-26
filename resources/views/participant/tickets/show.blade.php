@@ -67,12 +67,15 @@
         </div>
 
         <x-slot:footer>
-            {{-- Printing is the download path for the MVP: it produces a PDF
-                 or paper copy through the browser with no extra dependency.
-                 The final downloadable format is still an open decision
-                 (IMPLEMENTATION_PLAN Phase 07). --}}
+            {{-- Phase 13 renders the ticket server-side as a PDF, so the file is
+                 the same document the participant receives by email rather than
+                 whatever the browser decides to print. --}}
+            <x-button size="sm" :href="route('tickets.pdf', $order->access_token)">
+                Unduh PDF
+            </x-button>
+
             <x-button variant="secondary" size="sm" onclick="window.print()">
-                Cetak / Simpan PDF
+                Cetak
             </x-button>
 
             <x-button variant="ghost" size="sm" :href="route('orders.show', $order->access_token)">
