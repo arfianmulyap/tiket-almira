@@ -13,50 +13,149 @@
                 {{ config('app.name') }}
             </a>
 
+            {{-- Menu entries follow the permissions of the signed-in admin's
+                 role, so a role without a permission never sees a screen it
+                 would be refused. The routes and policies enforce the same
+                 rules independently of this menu (Phase 10). --}}
             <p class="app-sidebar-section">Operasional</p>
 
             <ul class="app-nav">
-                <li>
-                    <a
-                        class="app-nav-link"
-                        href="{{ route('admin.dashboard') }}"
-                        @if (request()->routeIs('admin.dashboard')) aria-current="page" @endif
-                    >
-                        Dashboard
-                    </a>
-                </li>
-                <li>
-                    <a
-                        class="app-nav-link"
-                        href="{{ route('admin.events.index') }}"
-                        @if (request()->routeIs('admin.events.*')) aria-current="page" @endif
-                    >
-                        Event
-                    </a>
-                </li>
-                <li>
-                    <a
-                        class="app-nav-link"
-                        href="{{ route('admin.orders.index') }}"
-                        @if (request()->routeIs('admin.orders.*')) aria-current="page" @endif
-                    >
-                        Pesanan
-                    </a>
-                </li>
-                <li>
-                    <a
-                        class="app-nav-link"
-                        href="{{ route('admin.check-in.show') }}"
-                        @if (request()->routeIs('admin.check-in.*')) aria-current="page" @endif
-                    >
-                        Check-in
-                    </a>
-                </li>
+                @can('dashboard.view')
+                    <li>
+                        <a
+                            class="app-nav-link"
+                            href="{{ route('admin.dashboard') }}"
+                            @if (request()->routeIs('admin.dashboard')) aria-current="page" @endif
+                        >
+                            Dashboard
+                        </a>
+                    </li>
+                @endcan
+
+                @can('events.view')
+                    <li>
+                        <a
+                            class="app-nav-link"
+                            href="{{ route('admin.events.index') }}"
+                            @if (request()->routeIs('admin.events.*')) aria-current="page" @endif
+                        >
+                            Event
+                        </a>
+                    </li>
+                @endcan
+
+                @can('orders.view')
+                    <li>
+                        <a
+                            class="app-nav-link"
+                            href="{{ route('admin.orders.index') }}"
+                            @if (request()->routeIs('admin.orders.*')) aria-current="page" @endif
+                        >
+                            Pesanan
+                        </a>
+                    </li>
+                @endcan
+
+                @can('check-in.perform')
+                    <li>
+                        <a
+                            class="app-nav-link"
+                            href="{{ route('admin.check-in.show') }}"
+                            @if (request()->routeIs('admin.check-in.*')) aria-current="page" @endif
+                        >
+                            Check-in
+                        </a>
+                    </li>
+                @endcan
             </ul>
+
+            {{-- Payment settings (Phase 12): toggling and viewing follows
+                 payment-methods.view; editing the recipient details is a
+                 Super Admin decision enforced on the edit screen. --}}
+            @can('payment-methods.view')
+                <p class="app-sidebar-section">Pengaturan</p>
+
+                <ul class="app-nav">
+                    <li>
+                        <a
+                            class="app-nav-link"
+                            href="{{ route('admin.payment-methods.index') }}"
+                            @if (request()->routeIs('admin.payment-methods.*')) aria-current="page" @endif
+                        >
+                            Metode Pembayaran
+                        </a>
+                    </li>
+                </ul>
+            @endcan
+
+            {{-- Audit trail (Phase 12). Super Admin only, deliberately not a
+                 grantable permission: it exposes every access and
+                 configuration change in the panel. --}}
+            @if (auth()->user()->isSuperAdmin())
+                <p class="app-sidebar-section">Keamanan</p>
+
+                <ul class="app-nav">
+                    <li>
+                        <a
+                            class="app-nav-link"
+                            href="{{ route('admin.audit-logs.index') }}"
+                            @if (request()->routeIs('admin.audit-logs.*')) aria-current="page" @endif
+                        >
+                            Audit Log
+                        </a>
+                    </li>
+                </ul>
+            @endif
+
+            @canany(['roles.view', 'permissions.manage', 'admin-accounts.view'])
+                <p class="app-sidebar-section">Hak Akses</p>
+
+                <ul class="app-nav">
+                    @can('roles.view')
+                        <li>
+                            <a
+                                class="app-nav-link"
+                                href="{{ route('admin.roles.index') }}"
+                                @if (request()->routeIs('admin.roles.*')) aria-current="page" @endif
+                            >
+                                Role &amp; Permission
+                            </a>
+                        </li>
+                    @endcan
+
+                    @can('permissions.manage')
+                        <li>
+                            <a
+                                class="app-nav-link"
+                                href="{{ route('admin.permissions.index') }}"
+                                @if (request()->routeIs('admin.permissions.*')) aria-current="page" @endif
+                            >
+                                Permission
+                            </a>
+                        </li>
+                    @endcan
+
+                    {{-- Account list and invitations (Phase 11). Distinct from
+                         role management: handling people is not the same
+                         permission as granting access. --}}
+                    @can('admin-accounts.view')
+                        <li>
+                            <a
+                                class="app-nav-link"
+                                href="{{ route('admin.accounts.index') }}"
+                                @if (request()->routeIs('admin.accounts.*')) aria-current="page" @endif
+                            >
+                                Akun Admin
+                            </a>
+                        </li>
+                    @endcan
+                </ul>
+            @endcanany
 
             <div class="app-sidebar-footer">
                 <p class="app-sidebar-footer-label">Masuk sebagai</p>
                 <p class="app-sidebar-footer-name">{{ auth()->user()->name }}</p>
+                <p class="text-xs text-muted">{{ auth()->user()->role?->name }}</p>
             </div>
         </aside>
 
@@ -78,6 +177,12 @@
                 </div>
 
                 <div class="app-topbar-end">
+                    {{-- Self-service profile: available to every admin, so it is
+                         not permission-gated (Phase 11). --}}
+                    <x-button variant="secondary" size="sm" :href="route('admin.profile.edit')">
+                        Profil
+                    </x-button>
+
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <x-button variant="secondary" size="sm">Logout</x-button>

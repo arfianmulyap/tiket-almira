@@ -83,14 +83,14 @@ class OrderController extends Controller
             $this->expiry->expire($order);
         }
 
+        $methods = $this->paymentMethods->forOrder($order);
+
         return view('participant.orders.show', [
             'order' => $order,
-            // Only methods this environment may actually offer. In production
-            // with no confirmed methods this is empty and the view falls back
-            // to a labelled "not yet available" state rather than inventing
-            // instructions (PRD section 15 questions 1 and 2).
-            'paymentMethods' => $this->paymentMethods->available(),
-            'showsDummyPaymentData' => $this->paymentMethods->showsDummyData(),
+            // The methods and instructions this order was created with. A
+            // later settings change affects new orders only (Phase 12).
+            'paymentMethods' => $methods,
+            'showsDummyPaymentData' => $methods->contains(fn ($method) => $method->isDummy),
             // Derived from config so the hint, the accept attribute, and the
             // validation rules can never disagree about the limits.
             'proofMaxMegabytes' => round(((int) config('payments.proof.max_kilobytes', 4096)) / 1024, 1),

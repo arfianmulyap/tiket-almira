@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\EmailDeliveryStatus;
 use App\Exceptions\OrderNotDecidableException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RejectPaymentRequest;
@@ -38,15 +39,20 @@ class PaymentVerificationController extends Controller
         // Sent after the transaction has committed, never inside it. A mail
         // transport that blocks or throws must not hold a database lock or
         // roll back a valid approval (PRD FR-09).
-        $delivered = $this->mailer->send($ticket);
+        $delivery = $this->mailer->send($ticket, $request->user());
 
-        $message = $delivered
-            ? 'Pembayaran disetujui, tiket diterbitkan, dan e-ticket dikirim ke email peserta.'
-            : 'Pembayaran disetujui dan tiket diterbitkan. E-ticket belum dikirim melalui email.';
+        // The approval itself always succeeded, so a delivery problem is a
+        // warning rather than an error: the ticket exists and the participant
+        // can still open it through the status page.
+        $message = match ($delivery->status) {
+            EmailDeliveryStatus::Sent => 'Pembayaran disetujui, tiket diterbitkan, dan e-ticket dikirim ke email peserta.',
+            EmailDeliveryStatus::Skipped => 'Pembayaran disetujui dan tiket diterbitkan. Email e-ticket belum diaktifkan, jadi belum ada email yang dikirim.',
+            EmailDeliveryStatus::Failed => 'Pembayaran disetujui dan tiket diterbitkan, tetapi email e-ticket gagal dikirim. Gunakan "Kirim Ulang Tiket" di detail pesanan.',
+        };
 
         return redirect()
             ->route('admin.orders.show', $order)
-            ->with('success', $message);
+            ->with($delivery->status->isDelivered() ? 'success' : 'warning', $message);
     }
 
     /**

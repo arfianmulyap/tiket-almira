@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Enums\WhatsAppReminderStage;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\Order;
@@ -103,7 +104,16 @@ class OrderController extends Controller
     {
         $this->authorize('view', $order);
 
-        $order->load(['event', 'ticket', 'reviewer', 'payment']);
+        // Phase 13: the delivery history is loaded with the ticket so the
+        // "Email E-Ticket" card renders without a query per attempt.
+        // Phase 14: the WhatsApp reminder rows are loaded for the same reason.
+        $order->load([
+            'event',
+            'ticket.emailDeliveries.sentBy',
+            'reviewer',
+            'payment',
+            'whatsappDeliveries',
+        ]);
 
         return view('admin.orders.show', [
             'order' => $order,
@@ -112,6 +122,8 @@ class OrderController extends Controller
                 ->with('user')
                 ->orderByDesc('created_at')
                 ->get(),
+            // Both reminder stages, including one that has not been queued yet.
+            'whatsappStages' => WhatsAppReminderStage::ordered(),
         ]);
     }
 }

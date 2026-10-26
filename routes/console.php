@@ -28,3 +28,22 @@ Schedule::command('orders:expire-overdue')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+/*
+|--------------------------------------------------------------------------
+| WhatsApp payment reminders (Phase 14)
+|--------------------------------------------------------------------------
+|
+| Runs every minute because the reminders are anchored to minute 30 and
+| minute 50 of each order, not to fixed clock times. The service itself
+| decides whether anything is due, so a manual run or a late scheduler
+| cannot send a reminder twice or out of order.
+|
+| Nothing is sent while WHATSAPP_ENABLED=false. The default `log` driver
+| writes to the log instead of contacting a provider; see config/whatsapp.php.
+|
+*/
+Schedule::command('whatsapp:send-payment-reminders')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();

@@ -1611,3 +1611,21 @@ img {
         transition-duration: 0.01ms !important;
     }
 }
+
+/* ==========================================================================
+   21. Read-only metadata (Phase 12 audit detail)
+   ========================================================================== */
+
+.code-block {
+    margin: 0;
+    padding: var(--space-4);
+    overflow-x: auto;
+    background: var(--color-neutral-100);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-body);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

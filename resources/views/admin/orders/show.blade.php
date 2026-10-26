@@ -233,6 +233,176 @@
                     </x-alert>
                 @endcan
             </x-card>
+
+            @if ($order->ticket)
+                {{--
+                    Phase 13: what happened to the e-ticket email. Only rendered
+                    once a ticket exists, because before approval there is
+                    nothing to send. The history is append-only, so a failed
+                    attempt stays visible after a successful resend — that is
+                    what makes the trail trustworthy.
+                --}}
+                <x-card title="Email E-Ticket" class="u-mt-6">
+                    @php
+                        $deliveries = $order->ticket->emailDeliveries;
+                        $latest = $deliveries->first();
+                    @endphp
+
+                    @unless (config('tickets.email_enabled'))
+                        <x-alert variant="warning" class="u-mb-4">
+                            Pengiriman email e-ticket belum diaktifkan
+                            (<code class="text-xs">TICKET_EMAIL_ENABLED=false</code>).
+                            Peserta tetap dapat membuka tiketnya lewat halaman
+                            status pesanan.
+                        </x-alert>
+                    @endunless
+
+                    <dl class="detail-list">
+                        <div class="detail-row">
+                            <dt>Penerima</dt>
+                            <dd>{{ $order->participant_email }}</dd>
+                        </div>
+
+                        <div class="detail-row">
+                            <dt>Status Terakhir</dt>
+                            <dd>
+                                @if ($latest)
+                                    <x-badge :variant="$latest->status->badgeVariant()">
+                                        {{ $latest->status->label() }}
+                                    </x-badge>
+                                    <p class="text-xs text-muted">
+                                        {{ $latest->created_at->translatedFormat('d M Y, H:i') }} WIB
+                                        oleh {{ $latest->actorName() }}
+                                    </p>
+                                @else
+                                    <span class="text-xs text-muted">Belum pernah dikirim</span>
+                                @endif
+                            </dd>
+                        </div>
+                    </dl>
+
+                    @if ($latest?->error_message)
+                        <x-alert variant="error" class="u-mt-4">
+                            {{ $latest->error_message }}
+                        </x-alert>
+                    @endif
+
+                    @if ($deliveries->isNotEmpty())
+                        <p class="section-title u-mt-6">Riwayat Pengiriman</p>
+
+                        <dl class="detail-list">
+                            @foreach ($deliveries->take(5) as $delivery)
+                                <div class="detail-row">
+                                    <dt>{{ $delivery->status->label() }}</dt>
+                                    <dd>
+                                        {{ $delivery->created_at->translatedFormat('d M Y, H:i') }} WIB
+                                        — {{ $delivery->actorName() }}
+                                    </dd>
+                                </div>
+                            @endforeach
+                        </dl>
+                    @endif
+
+                    @can('resendTicket', $order)
+                        <form
+                            method="POST"
+                            action="{{ route('admin.orders.ticket-email', $order) }}"
+                            class="u-mt-6"
+                        >
+                            @csrf
+
+                            <x-button variant="secondary" block>Kirim Ulang Tiket</x-button>
+                        </form>
+
+                        <p class="field-hint">
+                            Mengirim ulang memakai tiket dan QR yang sama. Tidak ada
+                            tiket baru yang dibuat, jadi kode lama tetap berlaku.
+                        </p>
+                    @endcan
+                </x-card>
+            @endif
+
+            {{--
+                Phase 14: scheduled WhatsApp reminders. This card stays visible
+                for every order, including ones that already moved on, because
+                the skipped rows explain why no reminder was sent.
+            --}}
+            <x-card title="Pengingat WhatsApp" class="u-mt-6">
+                @unless (config('whatsapp.enabled'))
+                    <x-alert variant="warning" class="u-mb-4">
+                        Pengingat WhatsApp belum diaktifkan
+                        (<code class="text-xs">WHATSAPP_ENABLED=false</code>).
+                        Tidak ada pesan yang dikirim ke peserta.
+                    </x-alert>
+                @elseif (config('whatsapp.driver') === 'log')
+                    <x-alert variant="info" class="u-mb-4">
+                        Driver <code class="text-xs">log</code> aktif: pesan hanya
+                        dicatat di log aplikasi dan tidak dikirim ke provider
+                        WhatsApp. Gunakan hanya untuk QA lokal atau staging.
+                    </x-alert>
+                @endunless
+
+                <dl class="detail-list">
+                    <div class="detail-row">
+                        <dt>Penerima</dt>
+                        <dd>{{ $order->participant_whatsapp }}</dd>
+                    </div>
+                </dl>
+
+                <p class="section-title u-mt-6">Jadwal Pengingat</p>
+
+                <dl class="detail-list">
+                    @foreach ($whatsappStages as $stage)
+                        @php
+                            $delivery = $order->whatsappDeliveries->first(
+                                fn ($item) => $item->kind === $stage
+                            );
+                            $scheduledAt = $order->created_at->copy()->addMinutes($stage->minute());
+                        @endphp
+
+                        <div class="detail-row">
+                            <dt>{{ $stage->label() }}</dt>
+                            <dd>
+                                @if ($delivery)
+                                    <x-badge :variant="$delivery->status->badgeVariant()">
+                                        {{ $delivery->status->label() }}
+                                    </x-badge>
+
+                                    @if ($delivery->attempts > 0)
+                                        <p class="text-xs text-muted">
+                                            {{ $delivery->attempts }} percobaan
+                                            @if ($delivery->driver)
+                                                &middot; driver {{ $delivery->driver }}
+                                            @endif
+                                            @if ($delivery->sent_at)
+                                                &middot; {{ $delivery->sent_at->translatedFormat('d M Y, H:i') }} WIB
+                                            @endif
+                                        </p>
+                                    @endif
+
+                                    @if ($delivery->error_message)
+                                        <p class="text-xs text-muted">{{ $delivery->error_message }}</p>
+                                    @endif
+                                @elseif ($order->acceptsPaymentProof() && $scheduledAt->isFuture())
+                                    <span class="text-xs text-muted">
+                                        Dijadwalkan {{ $scheduledAt->translatedFormat('d M Y, H:i') }} WIB
+                                    </span>
+                                @else
+                                    <span class="text-xs text-muted">Tidak dikirim</span>
+                                @endif
+                            </dd>
+                        </div>
+                    @endforeach
+                </dl>
+
+                <p class="field-hint">
+                    Pengingat hanya dikirim selama pesanan masih menunggu pembayaran,
+                    belum ada bukti yang diunggah, dan tenggat belum lewat. Setiap
+                    tahap dicatat satu kali agar pesan yang sama tidak terkirim ganda;
+                    percobaan ulang dibatasi
+                    {{ config('whatsapp.reminders.max_attempts') }} kali.
+                </p>
+            </x-card>
         </div>
     </div>
 @endsection

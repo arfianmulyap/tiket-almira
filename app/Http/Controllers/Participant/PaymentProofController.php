@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Participant;
 use App\Exceptions\PaymentProofNotAcceptedException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePaymentProofRequest;
-use App\Models\Order;
 use App\Services\PaymentProofService;
 use Illuminate\Http\RedirectResponse;
 
@@ -22,14 +21,14 @@ class PaymentProofController extends Controller
      */
     public function store(StorePaymentProofRequest $request, string $token): RedirectResponse
     {
-        $order = Order::query()
-            ->where('access_token', $token)
-            ->firstOrFail();
+        $order = $request->order();
+
+        abort_if($order === null, 404);
 
         try {
             $this->proofs->submit(
                 $order,
-                $request->paymentMethod(),
+                $request->paymentMethodFor($order),
                 $request->file('proof'),
             );
         } catch (PaymentProofNotAcceptedException $exception) {

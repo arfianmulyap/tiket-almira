@@ -24,6 +24,8 @@ class OrderService
      */
     public const PAYMENT_WINDOW_MINUTES = 60;
 
+    public function __construct(private readonly PaymentMethodRegistry $paymentMethods) {}
+
     /**
      * Create one order holding one quota slot.
      *
@@ -72,6 +74,11 @@ class OrderService
             // Snapshot, not a live reference: later price edits must leave
             // this order untouched (PRD business rule 12).
             $order->ticket_price_snapshot = $lockedEvent->ticket_price;
+
+            // Same rule for the instructions the participant is about to
+            // follow. Editing a bank account or retiring a method changes
+            // what new orders see, never what this order shows (Phase 12).
+            $order->payment_instructions_snapshot = $this->paymentMethods->snapshot();
 
             $order->status = OrderStatus::PendingPayment;
             $order->expires_at = $now->copy()->addMinutes(self::PAYMENT_WINDOW_MINUTES);
