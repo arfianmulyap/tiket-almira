@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\TicketEmailController;
 use App\Http\Controllers\Auth\AdminInvitationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\CronController;
 use App\Http\Controllers\Participant\EventController as ParticipantEventController;
 use App\Http\Controllers\Participant\OrderController;
 use App\Http\Controllers\Participant\PaymentProofController;
@@ -58,6 +59,24 @@ Route::get('tickets/{token}', [TicketController::class, 'show'])->name('tickets.
 // Same e-ticket as a downloadable PDF (Phase 13). Same credential as the page
 // above, so the file never becomes a second, weaker way in.
 Route::get('tickets/{token}/pdf', [TicketController::class, 'pdf'])->name('tickets.pdf');
+
+/*
+|--------------------------------------------------------------------------
+| Scheduler endpoint
+|--------------------------------------------------------------------------
+|
+| Runs the overdue-order sweep over HTTP, for hosts with no always-on process
+| to run `schedule:run` (PRD FR-08). Authorised inside the controller by a
+| shared secret and returns 404 when no secret is configured, so it is inert
+| unless deliberately enabled.
+|
+| Outside the admin group on purpose: the caller is a scheduler, not a logged
+| in admin, and it holds a secret rather than a session.
+|
+*/
+
+Route::get('cron/expire-overdue-orders', [CronController::class, 'expireOverdueOrders'])
+    ->name('cron.expire-overdue-orders');
 
 /*
 |--------------------------------------------------------------------------

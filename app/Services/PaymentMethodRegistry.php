@@ -21,15 +21,20 @@ use Illuminate\Support\Collection;
  * Filter 2 exists because the account, VA, and QRIS details are unanswered
  * business questions (PRD section 15 questions 1 and 2). Development needs
  * *some* method to exercise the upload flow, but a placeholder account number
- * presented as a real instruction would cause participants to send money into
- * the void. In production the dummy rows vanish and the UI falls back to an
- * honest "not yet available" state. Only a Super Admin can clear the flag, and
- * only after entering the details the business confirmed.
+ * presented as a real payment instruction would cause participants to send
+ * money into the void. Rather than rely on someone remembering to empty the
+ * config before deploying, the guard is in code: in production the dummy
+ * entries vanish and the UI falls back to an honest "not yet available"
+ * state.
  *
- * Until `PaymentMethodSeeder` has run the table is empty. In that case the
- * registry falls back to `config/payments.php`, which is exactly how Phases
- * 05 and 05C behaved, so an existing installation keeps working across the
- * deployment. As soon as the table has rows, it is authoritative.
+ * An internal, non-public deployment is the one case where that guard is too
+ * strict: the whole point of such a deployment is to exercise the ordering and
+ * upload flow end to end, which is impossible with no selectable method. The
+ * PAYMENTS_ALLOW_DUMMY escape hatch below covers it. It is opt-in, defaults to
+ * off, and does not suppress the "Mode pengembangan / Jangan melakukan
+ * transfer" warning the UI renders for dummy data, so a participant who
+ * somehow reaches the page is still told plainly not to send money. Never
+ * enable it on a deployment real participants can reach.
  */
 class PaymentMethodRegistry
 {
@@ -186,9 +191,18 @@ class PaymentMethodRegistry
 
     /**
      * Whether this environment may display placeholder payment data.
+     *
+     * Local and testing always may. Any other environment may only when
+     * explicitly opted in via PAYMENTS_ALLOW_DUMMY, which exists for internal
+     * deployments that need a selectable method to exercise the flow. The
+     * default is false, so forgetting to set it fails closed.
      */
     private function allowsDummyData(): bool
     {
-        return in_array(app()->environment(), self::DUMMY_ENVIRONMENTS, true);
+        if (in_array(app()->environment(), self::DUMMY_ENVIRONMENTS, true)) {
+            return true;
+        }
+
+        return (bool) config('payments.allow_dummy', false);
     }
 }

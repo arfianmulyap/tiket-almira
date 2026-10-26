@@ -1,0 +1,26 @@
+{
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "framework": null,
+    "buildCommand": "npm install --ignore-scripts --no-audit --no-fund && npm run build",
+    "outputDirectory": "public",
+    "functions": {
+        "api/index.php": {
+            "runtime": "vercel-php@0.7.4",
+            "memory": 512,
+            "maxDuration": 60
+        }
+    },
+    "routes": [
+        { "src": "/", "dest": "/api/index.php" },
+        { "src": "/index\\.php", "dest": "/api/index.php" },
+        { "src": "/\\.htaccess", "status": 404 },
+        { "handle": "filesystem" },
+        { "src": "/(.*)", "dest": "/api/index.php" }
+    ],
+    "crons": [
+        {
+            "path": "/cron/expire-overdue-orders",
+            "schedule": "0 1 * * *"
+        }
+    ]
+}
