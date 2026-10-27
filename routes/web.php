@@ -193,18 +193,41 @@ Route::middleware(['auth', 'admin'])
         Route::post('accounts/{user}/deactivate', [AdminAccountController::class, 'deactivate'])
             ->name('accounts.deactivate');
 
-        // Payment settings (Phase 12). Toggling follows the grantable
-        // `payment-methods.manage` permission. Editing the account, VA, and
-        // QRIS details is Super Admin only, which PaymentMethodPolicy
-        // enforces rather than the routes.
+        // Payment settings (Phase 12, extended in Phase 12B). Toggling follows the
+        // grantable `payment_methods.toggle` permission; creating, editing
+        // details, and deleting each follow their own permission, and marking
+        // details as official stays Super Admin only. PaymentMethodPolicy
+        // enforces all of it rather than the routes.
         Route::get('payment-methods', [PaymentMethodController::class, 'index'])
             ->name('payment-methods.index');
+        Route::get('payment-methods/create', [PaymentMethodController::class, 'create'])
+            ->name('payment-methods.create');
+        Route::post('payment-methods', [PaymentMethodController::class, 'store'])
+            ->name('payment-methods.store');
         Route::post('payment-methods/{paymentMethod}/toggle', [PaymentMethodController::class, 'toggle'])
             ->name('payment-methods.toggle');
         Route::get('payment-methods/{paymentMethod}/edit', [PaymentMethodController::class, 'edit'])
             ->name('payment-methods.edit');
         Route::put('payment-methods/{paymentMethod}', [PaymentMethodController::class, 'update'])
             ->name('payment-methods.update');
+
+        // Deleting a method is refused by the controller whenever payments or
+        // order snapshots still reference it, so this route cannot be the way
+        // history is erased.
+        Route::delete('payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy'])
+            ->name('payment-methods.destroy');
+
+        // Per-event activation (Phase 12B). Nested under the event so the
+        // selected event is part of the URL the admin actually sees, and POST /
+        // DELETE so a link or a prefetch cannot change what participants are
+        // offered. No route carries a permission name: the controller
+        // authorises through PaymentMethodPolicy.
+        Route::get('events/{event}/payment-methods', [PaymentMethodController::class, 'forEvent'])
+            ->name('events.payment-methods');
+        Route::post('events/{event}/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'toggleForEvent'])
+            ->name('events.payment-methods.toggle');
+        Route::delete('events/{event}/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'clearEventOverride'])
+            ->name('events.payment-methods.inherit');
 
         // Read-only audit trail (Phase 12). Super Admin only, enforced by
         // AuditLogPolicy. There are no write routes: the trail is append-only

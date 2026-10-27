@@ -69,10 +69,12 @@
                 @endcan
             </ul>
 
-            {{-- Payment settings (Phase 12): toggling and viewing follows
-                 payment-methods.view; editing the recipient details is a
-                 Super Admin decision enforced on the edit screen. --}}
-            @can('payment-methods.view')
+            {{-- Payment settings (Phase 12, extended in Phase 12B): viewing follows
+                 payment_methods.view; creating, editing details, toggling, and
+                 deleting follow their own permissions, and publishing
+                 unconfirmed details as official is a Super Admin decision
+                 enforced on the edit screen. --}}
+            @can('payment_methods.view')
                 <p class="app-sidebar-section">Pengaturan</p>
 
                 <ul class="app-nav">

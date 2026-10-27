@@ -11,11 +11,12 @@ use Illuminate\Database\Seeder;
  * table (Phase 12).
  *
  * Safe to run repeatedly: `firstOrCreate` only inserts missing keys, so a
- * method an admin has since renamed, retired, or given real account details is
- * never overwritten by a later deployment. Adding a brand-new method still
- * means adding an entry to the config file and running this seeder, because
- * the final list of methods and their type-specific details is a business
- * decision that has not been confirmed (PRD section 15 questions 1 and 2).
+ * method an admin has since renamed, retyped, retired, or given real account
+ * details is never overwritten by a later deployment. Since Phase 12B a new
+ * method can also be created from the admin panel, which is now the intended
+ * route; this seeder remains the way to introduce a method that must exist on
+ * every installation, and the fallback for an installation whose
+ * `payment_methods` table is still empty.
  */
 class PaymentMethodSeeder extends Seeder
 {
@@ -34,6 +35,7 @@ class PaymentMethodSeeder extends Seeder
                 ['key' => $method->key],
                 [
                     'label' => $method->label,
+                    'type' => $method->type,
                     'is_active' => $method->isActive,
                     'is_dummy' => $method->isDummy,
                     'account' => $method->account,

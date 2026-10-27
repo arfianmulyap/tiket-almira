@@ -303,7 +303,7 @@ sudah benar — tanpa itu admin baru tidak akan pernah menerima tautannya.
 
 ---
 
-## 9. Metode pembayaran & audit log (Phase 12)
+## 9. Metode pembayaran & audit log (Phase 12, dikembangkan Phase 12B)
 
 ### Saat deploy
 
@@ -313,33 +313,120 @@ php artisan db:seed --class=PaymentMethodSeeder --force
 php artisan db:seed --class=RolePermissionSeeder --force
 ```
 
-Migrasi `2026_10_26_000002_create_payment_methods_table` membuat tabel
-`payment_methods`, dan
-`2026_10_26_000003_add_payment_instructions_snapshot_to_orders_table` menambah
-`orders.payment_instructions_snapshot`. Migrasi kedua juga mengisi snapshot
-pesanan lama dengan katalog yang aktif saat migrasi dijalankan; setelah itu
-instruksi pesanan tersebut tidak berubah lagi.
+Migrasi Phase 12:
+
+- `2026_10_26_000002_create_payment_methods_table` membuat tabel
+  `payment_methods`.
+- `2026_10_26_000003_add_payment_instructions_snapshot_to_orders_table` menambah
+  `orders.payment_instructions_snapshot` dan mengisi snapshot pesanan lama dengan
+  katalog yang aktif saat migrasi dijalankan; setelah itu instruksi pesanan
+  tersebut tidak berubah lagi.
+
+Migrasi Phase 12B:
+
+- `2026_10_27_000000_add_type_and_qr_image_to_payment_methods_table` menambah
+  `payment_methods.type` (bawaan `bank_transfer`) dan
+  `payment_methods.qr_image_path`. Baris lama tidak berubah; hanya tipe
+  bawaannya yang dipakai sampai diubah.
+- `2026_10_27_000001_create_event_payment_methods_table` membuat tabel override
+  aktivasi per event. Tanpa baris di tabel ini, sebuah event mengikuti status
+  global—itulah sebabnya instalasi yang tidak pernah menyentuh layar per event
+  berperilaku persis seperti Phase 12.
+- `2026_10_27_000002_rename_payment_method_permissions` mengganti nama kunci
+  permission `payment-methods.view` → `payment_methods.view` dan
+  `payment-methods.manage` → `payment_methods.toggle` **berdasarkan id**, jadi
+  role yang sudah diberi akses tidak kehilangan aksesnya saat deploy.
 
 `PaymentMethodSeeder` menyalin `config/payments.php` ke tabel dan aman
 dijalankan berulang: metode yang sudah ada tidak ditimpa, sehingga perubahan
-yang dibuat lewat panel tidak hilang saat deploy berikutnya. Seeder katalog
-perlu dijalankan agar permission baru (`payment-methods.view`,
-`payment-methods.manage`) tersedia untuk diberikan ke role selain Super Admin.
+yang dibuat lewat panel tidak hilang saat deploy berikutnya.
+
+`RolePermissionSeeder` perlu dijalankan agar permission baru tersedia untuk
+diberikan ke role selain Super Admin:
+
+| Permission | Arti |
+| --- | --- |
+| `payment_methods.view` | Melihat katalog metode dan status aktivasi |
+| `payment_methods.create` | Menambah metode baru |
+| `payment_methods.update` | Mengubah nama, tipe, detail, dan langkah pembayaran |
+| `payment_methods.toggle` | Mengaktifkan / menonaktifkan, global maupun per event |
+| `payment_methods.delete` | Menghapus metode yang tidak lagi dipakai |
+
+Super Admin selalu memiliki semuanya; role lain hanya mendapat yang diberikan
+lewat layar **Hak Akses → Role**. Menandai detail sebagai data resmi (menghapus
+centang “data contoh”) bukan permission yang bisa diberikan: itu hanya untuk
+Super Admin.
 
 ### Mengatur metode
 
 1. Buka **Pengaturan → Metode Pembayaran**. Halaman ini memerlukan permission
-   `payment-methods.view`.
-2. **Aktifkan / Nonaktifkan** memerlukan `payment-methods.manage`. Menonaktifkan
-   metode tidak menghapusnya: metode hilang dari pilihan pesanan baru, tetapi
-   pesanan lama tetap dapat menyelesaikan pembayaran dengan metode tersebut.
-3. **Ubah Detail** (rekening, VA, QRIS, dan langkah pembayaran) hanya dapat
-   dibuka role Super Admin, karena perubahan ini menentukan ke mana uang
-   peserta dikirim.
-4. Metode dengan penanda **Data contoh** (`is_dummy`) hanya tampil di
-   environment `local` dan `testing`. Di production metode tersebut tidak
-   pernah ditawarkan sampai detail resmi diisi dan centang "Tandai sebagai
-   data contoh" dihapus.
+   `payment_methods.view`.
+2. Setiap baris menampilkan nama, kunci, penyedia, **tipe**, status
+   **konfigurasi** (lengkap atau daftar detail yang masih kurang), status
+   **global**, dan—bila satu event dipilih—status untuk event tersebut.
+3. **Tambah Metode** memerlukan `payment_methods.create`. Kunci metode hanya
+   diisi saat pembuatan dan tidak dapat diubah setelahnya, karena dipakai
+   `payments.method` dan snapshot pesanan. Kunci yang masih dirujuk riwayat
+   pembayaran ditolak agar riwayat tidak berpindah ke metode baru.
+4. **Ubah Detail** memerlukan `payment_methods.update`: nama, tipe, detail
+   penerima, langkah pembayaran, dan gambar QR. Simpan perubahan meminta
+   konfirmasi karena mengubah ke mana uang peserta dikirim. Metode baru selalu
+   dimulai dalam keadaan nonaktif.
+5. **Aktifkan / Nonaktifkan** memerlukan `payment_methods.toggle`. Menonaktifkan
+   tidak menghapus: metode hilang dari pilihan pesanan baru, tetapi pesanan lama
+   tetap dapat menyelesaikan pembayaran dengan metode tersebut.
+6. **Hapus Metode** memerlukan `payment_methods.delete` dan hanya tersedia bila
+   metode belum pernah dipakai pembayaran maupun tersimpan pada snapshot
+   pesanan. Bila sudah dipakai, halaman ubah detail menjelaskan bahwa
+   satu-satunya tindakan aman adalah menonaktifkannya.
+7. Metode dengan penanda **Data contoh** (`is_dummy`) hanya tampil di environment
+   `local` dan `testing`. Di production metode tersebut tidak pernah ditawarkan
+   sampai detail resmi diisi dan centang “Tandai sebagai data contoh” dihapus
+   oleh Super Admin.
+
+### Tipe pembayaran dan kelengkapan detail
+
+`payment_methods.type` menentukan detail mana yang wajib diisi:
+
+| Tipe | Detail wajib | Gambar QR |
+| --- | --- | --- |
+| Transfer Bank | Bank, Nomor Rekening, Atas Nama | Tidak |
+| Virtual Account | Bank Penerbit, Nomor VA, Atas Nama | Tidak |
+| E-Wallet | Penyedia, Nomor Tujuan, Atas Nama | Tidak |
+| QRIS | Merchant | Ya, atau ID Merchant / NMID |
+
+Kolom detail pada form dibangun dari tipe yang dipilih, sehingga baris tersimpan
+selalu memakai label yang dikenal aplikasi. Baris lama dari Phase 12 yang
+labelnya tidak dikenal tetap disimpan, ditampilkan sebagai “Detail tambahan dari
+data lama”, dan tetap muncul pada instruksi pembayaran.
+
+Metode yang belum lengkap boleh disimpan sebagai draf, tetapi **tidak pernah
+ditawarkan kepada peserta**: peserta hanya melihat metode yang aktif, lengkap,
+dan tidak dimatikan untuk event yang dipesan.
+
+### Gambar QR merchant (QRIS)
+
+Gambar diunggah pada form ubah detail dan disimpan pada disk publik
+(`PAYMENT_QR_DISK`, bawaan mengikuti `POSTER_DISK`) karena peserta harus
+memuatnya untuk memindai. Batas format dan ukuran ada di
+`config/payments.php` (`qr_image`). Mengganti gambar tidak mengubah URL yang
+sudah tersimpan pada snapshot pesanan lama; mengosongkan kolom ID Merchant
+sekaligus menghapus gambar akan ditolak.
+
+### Aktivasi per event
+
+Buka **Event → Metode Pembayaran** (`/admin/events/{event}/payment-methods`) atau
+pilih satu event pada layar katalog metode. Layar ini memerlukan
+`payment_methods.view` untuk melihat dan `payment_methods.toggle` untuk mengubah.
+
+- **Aktifkan / Nonaktifkan di Event Ini** menulis satu baris override untuk event
+  tersebut saja. Event lain tidak terpengaruh.
+- **Ikuti Global** menghapus override sehingga event kembali mengikuti status
+  global; tanpa tombol ini sebuah override tidak dapat dibatalkan.
+- Tabel menampilkan status global, status khusus event ini, dan kolom
+  **Ditawarkan** yang merupakan hasil gabungan keduanya plus kelengkapan detail.
+- Menonaktifkan metode untuk sebuah event meminta konfirmasi, karena peserta
+  event tersebut langsung kehilangan pilihan itu pada pesanan baru.
 
 ### Snapshot instruksi pesanan
 
@@ -359,17 +446,40 @@ mentah. Tidak ada route membuat, mengubah, atau menghapus catatan.
 Yang tercatat: verifikasi pembayaran (`payment.*`), penerbitan tiket dan
 check-in (`ticket.*`), kedaluwarsa pesanan (`order.expired`), perubahan akses
 (`role.*`, `permission.*`), perubahan akun admin (`admin.*`), serta perubahan
-konfigurasi metode pembayaran (`payment.method_updated`,
-`payment.method_activated`, `payment.method_deactivated`).
+konfigurasi metode pembayaran: `payment.method_updated`,
+`payment.method_activated`, `payment.method_deactivated`, dan—sejak Phase 12B—
+`payment.method_created`, `payment.method_deleted`,
+`payment.method_event_toggled` (berisi `event_id` dan `event_name`), serta
+`payment.method_event_inherited`. Catatan audit tidak pernah menyimpan password,
+token akses, atau OTP; yang tersimpan adalah detail metode beserta aktornya.
 
 ### Menambah metode baru
 
-Belum ada formulir tambah metode: kunci metode (`key`) sengaja tidak dapat
-diubah karena dipakai `payments.method` dan snapshot pesanan. Menambah metode
-berarti menambahkan entri di `config/payments.php` lalu menjalankan
-`php artisan db:seed --class=PaymentMethodSeeder --force`. Daftar final metode
-serta detail rekening/VA/QRIS tetap menunggu keputusan bisnis (PRD section 15
-pertanyaan 1, 2, dan 16).
+Sejak Phase 12B metode baru ditambahkan lewat formulir **Tambah Metode**; entri
+di `config/payments.php` + `PaymentMethodSeeder` tetap tersedia untuk metode yang
+harus ada di setiap instalasi dan untuk instalasi yang tabelnya masih kosong.
+Kunci metode (`key`) hanya diisi saat pembuatan karena dipakai `payments.method`
+dan snapshot pesanan.
+
+### QA manual (Phase 12B)
+
+| # | Langkah | Hasil yang diharapkan |
+| --- | --- | --- |
+| 1 | Login sebagai Super Admin, buka **Pengaturan → Metode Pembayaran → Tambah Metode**, isi nama, kunci `qa_bank`, tipe Transfer Bank, lengkapi Bank/Nomor Rekening/Atas Nama, 1 langkah, lalu simpan | Metode tersimpan, muncul di daftar dalam keadaan **Nonaktif**, konfigurasi **Lengkap**, dan tercatat `payment.method_created` di audit log |
+| 2 | Ulangi dengan kunci `qa_bank` | Ditolak dengan pesan “Kunci metode sudah dipakai metode lain.” |
+| 3 | Tambah metode tipe QRIS tanpa gambar dan tanpa ID Merchant | Ditolak dengan pesan “Unggah gambar QR merchant atau isi ID Merchant / NMID.” |
+| 4 | Ubah tipe metode ke Virtual Account tanpa mengisi Nomor VA, lalu simpan | Ditolak dengan pesan “Nomor VA wajib diisi untuk tipe Virtual Account.” |
+| 5 | Aktifkan metode yang detailnya belum lengkap | Muncul peringatan bahwa metode belum ditawarkan dan detail apa yang kurang |
+| 6 | Buat dua event (A dan B), buka **Event A → Metode Pembayaran**, nonaktifkan satu metode di sana | Baris menjadi **Dinonaktifkan khusus** untuk Event A; halaman Event B tetap **Mengikuti global** |
+| 7 | Buka halaman pesanan event A dan event B | Metode yang dinonaktifkan hanya hilang pada event A |
+| 8 | Klik **Ikuti Global** pada baris tersebut | Override hilang, status kembali mengikuti global, tercatat `payment.method_event_inherited` |
+| 9 | Buat pesanan, catat nomor rekening pada instruksi, lalu ubah nomor rekening di katalog | Halaman status pesanan lama tetap menampilkan nomor lama; pesanan baru menampilkan nomor baru |
+| 10 | Coba hapus metode yang sudah dipakai pesanan | Ditolak dengan pesan agar metode dinonaktifkan saja; tombol hapus tidak muncul di halaman ubah detail |
+| 11 | Hapus metode yang belum pernah dipakai | Terhapus, tercatat `payment.method_deleted`, dan baris override per event-nya ikut hilang |
+| 12 | Login sebagai admin non-Super Admin tanpa permission metode, buka `/admin/payment-methods/create` dan kirim `POST` langsung | Ditolak 403 pada keduanya, bukan hanya disembunyikan di UI |
+| 13 | Sebagai admin dengan `payment_methods.update` tetapi bukan Super Admin, buka Ubah Detail sebuah metode yang sudah berstatus **Data resmi** | Kontrol “Tandai sebagai data contoh” tidak ditampilkan, hanya status bacaan; menyimpan perubahan lain tidak mengubah status data tersebut |
+| 14 | Sebagai admin dengan `payment_methods.toggle`, jalankan alur pembayaran peserta sampai bukti diunggah | Tidak ada regresi: metode, instruksi, dan unggah bukti tetap berjalan seperti sebelumnya |
+| 15 | Buka `/admin/audit-logs` sebagai Super Admin, lalu sebagai admin biasa | Super Admin melihat seluruh aksi di atas; admin biasa ditolak 403 |
 
 ---
 
@@ -563,8 +673,27 @@ pesanan yang sudah dibayar.
   (pertanyaan 1, 2, 16). Sejak Phase 12 katalog dikelola lewat tabel
   `payment_methods`, tetapi metode bertanda data contoh tetap tidak
   ditampilkan di production sampai detail resmi diisi.
-- Belum ada formulir tambah metode pembayaran; metode baru masih lewat
-  `config/payments.php` + `PaymentMethodSeeder`.
+- Baris `payment_methods` yang dibuat sebelum Phase 12B memakai tipe bawaan
+  `bank_transfer` sampai seorang admin memilih tipe yang benar pada form ubah
+  detail. Detail yang sudah ada tetap tampil; hanya validasi per tipe yang
+  mengikuti tipe tersebut.
+- Baris detail lama yang labelnya tidak dikenal aplikasi tidak dapat diubah dari
+  form; baris itu ditampilkan sebagai "Detail tambahan dari data lama" dan tetap
+  disimpan serta tetap tampil pada instruksi pembayaran.
+- Snapshot pesanan menyimpan URL gambar QR saat pesanan dibuat. Bila berkas
+  gambar kelak dihapus atau dipindahkan, pesanan lama akan menampilkan gambar
+  yang gagal dimuat; instruksi teksnya tetap utuh.
+- Menghapus metode tetap tidak mungkin selama pembayaran atau snapshot pesanan
+  masih merujuknya; tidak ada pengarsipan selain menonaktifkannya. Ini disengaja
+  agar riwayat tidak pernah kehilangan tujuannya.
+- Aktivasi per event hanya memengaruhi pesanan baru. Pesanan yang sudah dibuat
+  tetap memakai snapshot instruksinya, termasuk metode yang kemudian dimatikan
+  untuk event tersebut.
+- Tidak ada pengaturan detail rekening per event (di luar lingkup Phase 12B).
+  Detail tetap global; yang per event hanya aktif/nonaktif.
+- Test otomatis: sesuai Testing Policy, Phase 12B tidak menambahkan automated
+  test. Verifikasi dilakukan lewat migrasi, `route:list`, kompilasi Blade, Pint,
+  dan QA manual di atas.
 - Retry email masih manual: belum ada queue worker, jadwal retry, atau batas
   jumlah percobaan (Phase 13).
 - PDF e-ticket memakai font base-14 dengan encoding Windows-1252, jadi karakter

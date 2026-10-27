@@ -90,6 +90,26 @@
         </x-card>
     </div>
 
+    {{-- Payment method activation for this event (Phase 12B). Details are
+         global, so this screen only decides which methods this event offers. --}}
+    @can('payment_methods.view')
+        <x-card title="Metode Pembayaran" class="u-mt-6">
+            <p class="text-sm text-muted u-mb-4">
+                Metode pembayaran bersifat global: rekening, VA, dan QRIS-nya sama
+                untuk semua event. Yang diatur per event adalah apakah metode itu
+                ditawarkan kepada peserta event ini. Peserta hanya melihat metode
+                yang aktif, detailnya lengkap, dan tidak dimatikan untuk event ini.
+            </p>
+
+            <x-button
+                variant="secondary"
+                :href="route('admin.events.payment-methods', $event)"
+            >
+                Atur Metode untuk Event Ini
+            </x-button>
+        </x-card>
+    @endcan
+
     {{--
         Order, payment, ticket, and check-in summaries for this event belong to
         the phases that own that data. Nothing is shown here yet rather than

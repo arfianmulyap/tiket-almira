@@ -42,6 +42,39 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | QR merchant image (Phase 12B)
+    |--------------------------------------------------------------------------
+    |
+    | A QRIS payment method may carry an uploaded QR merchant image. Unlike a
+    | payment proof, this image is meant to be seen: the participant has to load
+    | it in order to scan it. It therefore lives on a publicly readable disk,
+    | and `disk` defaults to whatever the poster disk is set to, so a
+    | serverless deployment that already set POSTER_DISK=s3 keeps working
+    | without a second variable. PAYMENT_QR_DISK overrides it when the two must
+    | differ.
+    |
+    | The limits are recorded as an assumption, not a confirmed decision: the
+    | business has not stated a maximum image size. 2 MB is generous for a
+    | screenshot of a static QR code, and PNG/JPEG/WebP are the formats a bank
+    | or payment provider actually hands out.
+    |
+    */
+
+    'qr_image' => [
+        'max_kilobytes' => 2048,
+        'mimes' => ['jpg', 'jpeg', 'png', 'webp'],
+
+        // Public disk. Nothing secret is stored here, and the file must be
+        // reachable by URL for the participant to scan it.
+        //
+        // `?:` rather than a default argument: an env key that is present but
+        // empty means "not set" here, and an empty disk name would fail at
+        // upload time instead of falling back.
+        'disk' => env('PAYMENT_QR_DISK') ?: env('POSTER_DISK', 'public'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Payment methods
     |--------------------------------------------------------------------------
     |
@@ -64,14 +97,18 @@ return [
     |
     | Fields:
     |   label        Shown in the method picker.
+    |   type         Required detail fields and QR image expectations
+    |                (App\Enums\PaymentMethodType).
     |   is_active    Offered to participants at all.
     |   is_dummy     Development placeholder; blocked in production.
     |   account      Recipient rows rendered as a definition list.
     |   steps        Ordered transfer instructions.
     |
-    | `scope` records PRD section 15 question 16 (global vs per-event). Until
-    | that is answered the implementation reads one global list; the key is
-    | here so the intent is explicit rather than silently assumed.
+    | `scope` records PRD section 15 question 16 (global vs per-event). Phase 12B
+    | resolved it the way the business rules describe: the payment *details* stay
+    | global and shared by every event, while whether a method is *offered* became
+    | a per-event decision stored in `event_payment_methods`. The key is kept so
+    | the original question stays traceable; nothing reads it any more.
     |
     */
 
@@ -105,6 +142,7 @@ return [
 
         'dev_bank_transfer' => [
             'label' => '[CONTOH] Transfer Bank',
+            'type' => 'bank_transfer',
             'is_active' => true,
             'is_dummy' => true,
             'account' => [
@@ -121,6 +159,7 @@ return [
 
         'dev_ewallet' => [
             'label' => '[CONTOH] E-Wallet',
+            'type' => 'ewallet',
             'is_active' => true,
             'is_dummy' => true,
             'account' => [

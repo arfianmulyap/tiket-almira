@@ -1,28 +1,11 @@
 @extends('layouts.admin')
 
-@section('title', 'Ubah Metode Pembayaran')
+@section('title', 'Ubah Detail Metode Pembayaran')
 
 @section('content')
-    @php
-        // old() first so a validation error never discards what the Super
-        // Admin typed. Two blank rows are always offered so a line can be
-        // added without JavaScript; blank rows are dropped on save.
-        $rows = old('account', $method->account ?? []);
-
-        if (! is_array($rows)) {
-            $rows = [];
-        }
-
-        $rows = array_values($rows);
-        $rows[] = ['label' => '', 'value' => ''];
-        $rows[] = ['label' => '', 'value' => ''];
-
-        $stepsValue = old('steps', implode("\n", $method->steps ?? []));
-    @endphp
-
     <x-page-header
-        title="Ubah {{ $method->label }}"
-        description="Detail penerima dan langkah pembayaran yang dilihat peserta pada pesanan baru."
+        title="Ubah Detail Metode"
+        :description="$method->label"
     >
         <x-slot:actions>
             <x-button variant="secondary" :href="route('admin.payment-methods.index')">
@@ -30,6 +13,13 @@
             </x-button>
         </x-slot:actions>
     </x-page-header>
+
+    <x-alert variant="info" class="u-mb-6">
+        Perubahan berlaku untuk <strong>pesanan baru</strong> pada semua event.
+        Setiap pesanan menyimpan salinan instruksi pembayaran saat dibuat, sehingga
+        pesanan lama tetap menampilkan instruksi yang sudah diberikan.
+        Kunci metode <code>{{ $method->key }}</code> tidak diubah.
+    </x-alert>
 
     @if ($method->is_dummy && app()->environment('production'))
         <x-alert variant="error" title="Metode ini masih data contoh" class="u-mb-6">
@@ -39,127 +29,30 @@
         </x-alert>
     @endif
 
+    @unless ($method->isConfigured())
+        <x-alert variant="warning" title="Detail belum lengkap" class="u-mb-6">
+            Metode ini belum ditawarkan kepada peserta karena belum lengkap:
+            {{ implode(', ', $method->missingDetails()) }}.
+        </x-alert>
+    @endunless
+
+    {{--
+        Confirmation on submit: this form decides where participant money is
+        sent, and an account number is exactly the kind of field that is
+        plausible-looking when mistyped.
+    --}}
     <form
         method="POST"
         action="{{ route('admin.payment-methods.update', $method) }}"
+        enctype="multipart/form-data"
         class="stack"
+        novalidate
+        onsubmit="return confirm('Simpan perubahan detail metode ini? Detail yang berubah hanya berlaku untuk pesanan baru.')"
     >
         @csrf
         @method('PUT')
 
-        <x-card title="Identitas Metode">
-            <x-field
-                name="label"
-                label="Nama metode"
-                :value="$method->label"
-                required
-                hint="Nama ini tampil pada pilihan metode pembayaran peserta, misalnya Transfer Bank BSI."
-            />
-
-            <div class="field">
-                <p class="label">Kunci metode</p>
-                <p class="text-sm"><code>{{ $method->key }}</code></p>
-                <p class="field-hint">
-                    Kunci tidak dapat diubah karena dipakai oleh pembayaran dan
-                    snapshot pesanan yang sudah ada.
-                </p>
-            </div>
-        </x-card>
-
-        <x-card
-            title="Detail Penerima"
-            description="Rekening bank, nomor VA, atau identitas merchant QRIS. Satu baris berisi label dan nilainya."
-        >
-            @error('account')
-                <p class="field-error u-mb-4">{{ $message }}</p>
-            @enderror
-
-            <div class="grid grid-cols-2">
-                @foreach ($rows as $index => $row)
-                    @php
-                        $labelValue = is_array($row) ? ($row['label'] ?? '') : '';
-                        $detailValue = is_array($row) ? ($row['value'] ?? '') : '';
-                    @endphp
-
-                    <div class="field">
-                        <x-label :for="'account-'.$index.'-label'">Label</x-label>
-
-                        <x-input
-                            :name="'account['.$index.'][label]'"
-                            :id="'account-'.$index.'-label'"
-                            :value="$labelValue"
-                            placeholder="Contoh: Bank"
-                        />
-
-                        @error('account.'.$index.'.label')
-                            <p class="field-error">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="field">
-                        <x-label :for="'account-'.$index.'-value'">Nilai</x-label>
-
-                        <x-input
-                            :name="'account['.$index.'][value]'"
-                            :id="'account-'.$index.'-value'"
-                            :value="$detailValue"
-                            placeholder="Contoh: BSI 1234567890"
-                        />
-                    </div>
-                @endforeach
-            </div>
-
-            <p class="field-hint">
-                Baris kosong diabaikan. Maksimal 8 baris terisi. Jangan mencantumkan
-                data yang belum dikonfirmasi pemilik bisnis sebagai data resmi.
-            </p>
-        </x-card>
-
-        <x-card
-            title="Langkah Pembayaran"
-            description="Ditampilkan berurutan di bawah detail penerima."
-        >
-            <div class="field">
-                <x-label for="steps" :required="true">Langkah</x-label>
-
-                <x-textarea name="steps" :value="$stepsValue" :rows="7" required />
-
-                <p class="field-hint">
-                    Satu langkah per baris. Maksimal 10 langkah, 200 karakter per langkah.
-                </p>
-
-                <x-field-error name="steps" />
-            </div>
-        </x-card>
-
-        <x-card title="Status Data">
-            <div class="field">
-                {{-- Hidden field makes an unchecked box submit an explicit
-                     "0", so the request can distinguish "cleared" from
-                     "field missing" without guessing. --}}
-                <input type="hidden" name="is_dummy" value="0">
-
-                <label class="cluster" for="is_dummy">
-                    <input
-                        type="checkbox"
-                        id="is_dummy"
-                        name="is_dummy"
-                        value="1"
-                        @checked((bool) old('is_dummy', $method->is_dummy))
-                    >
-
-                    <span>Tandai sebagai data contoh (belum dikonfirmasi)</span>
-                </label>
-
-                <p class="field-hint">
-                    Metode yang ditandai data contoh tidak pernah ditampilkan kepada
-                    peserta di production. Hapus centang hanya setelah rekening, VA,
-                    atau QRIS di atas dikonfirmasi pemilik bisnis.
-                </p>
-
-                <x-field-error name="is_dummy" />
-            </div>
-        </x-card>
+        @include('admin.payment-methods._form', ['method' => $method, 'types' => $types])
 
         <div class="cluster">
             <x-button>Simpan Perubahan</x-button>
@@ -169,4 +62,33 @@
             </x-button>
         </div>
     </form>
+
+    @can('delete', $method)
+        <x-card title="Hapus Metode" class="u-mt-6">
+            @if ($method->hasHistoricalDependencies())
+                <x-alert variant="warning">
+                    Metode ini sudah dipakai pembayaran atau tersimpan pada snapshot
+                    pesanan, sehingga tidak dapat dihapus. Nonaktifkan saja agar
+                    tidak lagi ditawarkan kepada pesanan baru; riwayat tetap utuh.
+                </x-alert>
+            @else
+                <p class="text-sm text-muted u-mb-4">
+                    Metode ini belum pernah dipakai pesanan atau pembayaran mana pun.
+                    Menghapusnya juga menghapus pengaturan aktif/nonaktifnya pada
+                    setiap event dan gambar QR yang tersimpan.
+                </p>
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.payment-methods.destroy', $method) }}"
+                    onsubmit="return confirm('Hapus metode {{ $method->label }}? Tindakan ini tidak dapat dibatalkan.')"
+                >
+                    @csrf
+                    @method('DELETE')
+
+                    <x-button variant="danger">Hapus Metode</x-button>
+                </form>
+            @endif
+        </x-card>
+    @endcan
 @endsection

@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Enums\PaymentMethodType;
+
 /**
  * One payment method as it is offered to a participant.
  *
@@ -33,10 +35,12 @@ readonly class PaymentMethod
     public function __construct(
         public string $key,
         public string $label,
+        public string $type,
         public bool $isActive,
         public bool $isDummy,
         public array $account,
         public array $steps,
+        public ?string $qrImageUrl = null,
     ) {}
 
     /**
@@ -49,10 +53,12 @@ readonly class PaymentMethod
         return new self(
             key: (string) ($row['key'] ?? ''),
             label: (string) ($row['label'] ?? ($row['key'] ?? '')),
+            type: self::normaliseType($row['type'] ?? null),
             isActive: (bool) ($row['is_active'] ?? false),
             isDummy: (bool) ($row['is_dummy'] ?? true),
             account: self::normaliseAccount($row['account'] ?? []),
             steps: self::normaliseSteps($row['steps'] ?? []),
+            qrImageUrl: filled($row['qr_image_url'] ?? null) ? (string) $row['qr_image_url'] : null,
         );
     }
 
@@ -77,6 +83,7 @@ readonly class PaymentMethod
         return new self(
             key: $key,
             label: (string) ($definition['label'] ?? $key),
+            type: self::normaliseType($definition['type'] ?? null),
             isActive: (bool) ($definition['is_active'] ?? false),
             isDummy: (bool) ($definition['is_dummy'] ?? true),
             account: self::normaliseAccount($account),
@@ -94,12 +101,14 @@ readonly class PaymentMethod
         return new self(
             key: (string) ($row['key'] ?? ''),
             label: (string) ($row['label'] ?? ($row['key'] ?? '')),
+            type: self::normaliseType($row['type'] ?? null),
             // Not the current flag: the participant already received these
             // instructions, so they remain valid for this order.
             isActive: true,
             isDummy: (bool) ($row['is_dummy'] ?? true),
             account: self::normaliseAccount($row['account'] ?? []),
             steps: self::normaliseSteps($row['steps'] ?? []),
+            qrImageUrl: filled($row['qr_image_url'] ?? null) ? (string) $row['qr_image_url'] : null,
         );
     }
 
@@ -112,9 +121,11 @@ readonly class PaymentMethod
      * @return array{
      *     key: string,
      *     label: string,
+     *     type: string,
      *     is_dummy: bool,
      *     account: array<int, array{label: string, value: string}>,
-     *     steps: array<int, string>
+     *     steps: array<int, string>,
+     *     qr_image_url: string|null
      * }
      */
     public function toSnapshot(): array
@@ -122,10 +133,102 @@ readonly class PaymentMethod
         return [
             'key' => $this->key,
             'label' => $this->label,
+            'type' => $this->type,
             'is_dummy' => $this->isDummy,
             'account' => $this->account,
             'steps' => $this->steps,
+            // Snapshot of the image as it was when the order was created. If the
+            // business later replaces the file, this order keeps pointing at the
+            // version the participant was actually shown.
+            'qr_image_url' => $this->qrImageUrl,
         ];
+    }
+
+    /**
+     * Value a stored detail row holds for one field of this method's type.
+     *
+     * Matching runs through PaymentMethodType::fieldForLabel(), so a row written
+     * with a hand-typed label ("No. Rekening") is still recognised as the
+     * account number instead of looking empty.
+     */
+    public function detailValue(string $field): ?string
+    {
+        foreach ($this->account as $row) {
+            if (PaymentMethodType::fieldForLabel($row['label']) !== $field) {
+                continue;
+            }
+
+            return $row['value'];
+        }
+
+        return null;
+    }
+
+    /**
+     * The bank, provider, or merchant a participant pays into.
+     *
+     * QRIS has no bank, so the merchant name stands in.
+     */
+    public function providerValue(): ?string
+    {
+        return $this->detailValue('provider') ?? $this->detailValue('merchant');
+    }
+
+    /**
+     * Labels of the required details this method is still missing.
+     *
+     * Defined here rather than on the model because the participant-facing
+     * availability rule depends on it: a method that does not state where to
+     * send money must not be offered, whatever its active flags say (Phase 12B
+     * business rule 8).
+     *
+     * @return array<int, string>
+     */
+    public function missingDetails(): array
+    {
+        $type = PaymentMethodType::from($this->type);
+        $missing = [];
+
+        foreach ($type->details() as $field => $spec) {
+            if ($spec['required'] && blank($this->detailValue($field))) {
+                $missing[] = $spec['label'];
+            }
+        }
+
+        // A QRIS method may carry an NMID instead of an image, but not neither.
+        $reference = $type->merchantReferenceField();
+
+        if ($type->usesQrImage()
+            && blank($this->qrImageUrl)
+            && ($reference === null || blank($this->detailValue($reference)))) {
+            $missing[] = 'Gambar QR atau ID Merchant';
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Whether every required detail for this method's type is present.
+     */
+    public function isConfigured(): bool
+    {
+        return $this->missingDetails() === [];
+    }
+
+    /**
+     * Keep `type` to a value the rest of the application understands.
+     *
+     * A snapshot is free-form JSON and config/payments.php is hand-edited, so
+     * this is the one place where an unknown or missing type can enter. Falling
+     * back to the default keeps an old snapshot readable instead of making the
+     * order page fail on an unrecognised type.
+     */
+    private static function normaliseType(mixed $type): string
+    {
+        $candidate = is_string($type) ? trim($type) : '';
+
+        return PaymentMethodType::tryFrom($candidate)?->value
+            ?? PaymentMethodType::BankTransfer->value;
     }
 
     /**

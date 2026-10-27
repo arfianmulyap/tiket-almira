@@ -78,7 +78,9 @@ class OrderService
             // Same rule for the instructions the participant is about to
             // follow. Editing a bank account or retiring a method changes
             // what new orders see, never what this order shows (Phase 12).
-            $order->payment_instructions_snapshot = $this->paymentMethods->snapshot();
+            // Scoped to this event (Phase 12B), so a method disabled for this
+            // event never reaches a new order for it.
+            $order->payment_instructions_snapshot = $this->paymentMethods->snapshotForEvent($lockedEvent);
 
             $order->status = OrderStatus::PendingPayment;
             $order->expires_at = $now->copy()->addMinutes(self::PAYMENT_WINDOW_MINUTES);

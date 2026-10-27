@@ -1383,6 +1383,31 @@ img {
     margin: 0;
 }
 
+/* QR merchant image shown with a QRIS method's instructions (Phase 12B).
+   A QR code has to be large enough to scan but must not be stretched to the
+   container width, which would make a large scan fail, so it is capped. */
+.payment-qr-image {
+    display: block;
+    width: 100%;
+    max-width: 16rem;
+    height: auto;
+    margin-top: var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-muted);
+}
+
+/* Thumbnail of the stored QR image next to the upload control in the payment
+   method form. */
+.payment-qr-thumb {
+    display: block;
+    width: 8rem;
+    height: auto;
+    margin-top: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
 /* Proof preview. The image is untrusted participant input of unknown
    dimensions, so it is constrained on both axes and centred on a neutral
    surface rather than being allowed to set the card's height. */
