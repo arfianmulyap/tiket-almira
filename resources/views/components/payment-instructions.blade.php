@@ -5,8 +5,9 @@
 {{--
     Renders one payment method's recipient details and transfer steps.
 
-    Every value comes from config/payments.php via PaymentMethod, so nothing
-    about an account is written into a template (PRD FR-05: instructions are
+    Values come from the order's instruction snapshot (or, only while the
+    settings table is unseeded, from config/payments.php). Nothing about an
+    account is written into a template (PRD FR-05: instructions are
     configuration, not code). Blade escapes all of it by default.
 --}}
 <div {{ $attributes->class('payment-instructions') }}>
@@ -23,10 +24,10 @@
 
     @if (filled($method->account))
         <dl class="detail-list">
-            @foreach ($method->account as $label => $value)
+            @foreach ($method->account as $row)
                 <div class="detail-row">
-                    <dt>{{ $label }}</dt>
-                    <dd>{{ $value }}</dd>
+                    <dt>{{ $row['label'] }}</dt>
+                    <dd>{{ $row['value'] }}</dd>
                 </div>
             @endforeach
         </dl>

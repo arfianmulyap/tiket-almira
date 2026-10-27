@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
  * An issued e-ticket.
@@ -67,5 +68,27 @@ class Ticket extends Model
     public function isCheckedIn(): bool
     {
         return $this->status === TicketStatus::CheckedIn;
+    }
+
+    /**
+     * Every recorded attempt to email this ticket, newest first (Phase 13).
+     *
+     * A retry appends a row rather than replacing one, so the order detail page
+     * can show that the first attempt failed and the resend worked. Ordered in
+     * the relation so no caller has to remember to sort.
+     *
+     * @return MorphMany<EmailDelivery, $this>
+     */
+    public function emailDeliveries(): MorphMany
+    {
+        return $this->morphMany(EmailDelivery::class, 'emailable')->latest('id');
+    }
+
+    /**
+     * Outcome of the most recent delivery attempt, or null if never attempted.
+     */
+    public function latestDelivery(): ?EmailDelivery
+    {
+        return $this->emailDeliveries->first();
     }
 }

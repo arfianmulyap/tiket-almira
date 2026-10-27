@@ -12,11 +12,13 @@
 
             <div class="cluster">
                 @auth
-                    @if (auth()->user()->isAdmin())
+                    {{-- Only shown to an admin whose role can open the
+                         dashboard, so the link never leads to a 403. --}}
+                    @can('dashboard.view')
                         <x-button variant="ghost-inverse" size="sm" :href="route('admin.dashboard')">
                             Dashboard
                         </x-button>
-                    @endif
+                    @endcan
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf

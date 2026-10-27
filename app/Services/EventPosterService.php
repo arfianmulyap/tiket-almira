@@ -10,18 +10,17 @@ use Illuminate\Support\Str;
 /**
  * Stores and replaces event posters.
  *
- * Posters are shown on the public ordering page (PRD FR-03), so they live on
- * the `public` disk. The disk is named explicitly rather than relying on the
- * default: `FILESYSTEM_DISK` is `local` (private), which is the correct
- * default for payment proofs in Phase 05 and must stay that way.
+ * Posters are shown on the public ordering page (PRD FR-03), so they live on a
+ * publicly readable disk. The disk is read from `filesystems.poster_disk`
+ * rather than from `FILESYSTEM_DISK`, which is `local` (private) and is the
+ * correct default for payment proofs in Phase 05 and must stay that way.
+ *
+ * Resolving it through config also makes the disk swappable per environment:
+ * it stays `public` locally and becomes `s3` on a serverless host, where there
+ * is no persistent local filesystem to write to.
  */
 class EventPosterService
 {
-    /**
-     * Disk that serves poster images.
-     */
-    private const DISK = 'public';
-
     /**
      * Directory inside the disk.
      */
@@ -39,7 +38,7 @@ class EventPosterService
 
         $filename = $event->id.'-'.Str::random(24).'.'.$poster->extension();
 
-        $path = $poster->storeAs(self::DIRECTORY, $filename, self::DISK);
+        $path = $poster->storeAs(self::DIRECTORY, $filename, $this->disk());
 
         $event->poster_path = $path;
         $event->save();
@@ -60,10 +59,23 @@ class EventPosterService
      */
     public function deleteFile(string $path): void
     {
-        $disk = Storage::disk(self::DISK);
+        $disk = Storage::disk($this->disk());
 
         if ($disk->exists($path)) {
             $disk->delete($path);
         }
+    }
+
+    /**
+     * Disk that stores and serves poster images.
+     *
+     * Read from config so this service, Event::posterUrl(), and the tests all
+     * share one definition. Falls back to `public` rather than to
+     * `FILESYSTEM_DISK`: defaulting to the private disk would store posters
+     * somewhere with no public URL and silently break the ordering page.
+     */
+    public function disk(): string
+    {
+        return (string) config('filesystems.poster_disk', 'public');
     }
 }

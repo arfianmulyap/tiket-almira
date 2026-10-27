@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Enums\AdminAccountStatus;
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -49,6 +51,11 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * A correct password is not enough from Phase 11 onward: an account that is
+     * still waiting for its invitation or has been deactivated must stay out,
+     * and the reason has to be explained rather than hidden behind the generic
+     * "these credentials do not match" message.
+     *
      * @throws ValidationException
      */
     public function authenticate(): void
@@ -60,6 +67,20 @@ class LoginRequest extends FormRequest
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
+            ]);
+        }
+
+        $user = Auth::user();
+
+        if (! $user instanceof User || ! $user->isActive()) {
+            // Never keep a session for an account that may not use the panel.
+            Auth::guard('web')->logout();
+            RateLimiter::hit($this->throttleKey());
+
+            throw ValidationException::withMessages([
+                'email' => $user?->status === AdminAccountStatus::Invited
+                    ? 'Undangan akun ini belum diterima. Buka tautan undangan di email Anda untuk membuat password.'
+                    : 'Akun ini sudah dinonaktifkan. Hubungi Super Admin.',
             ]);
         }
 
