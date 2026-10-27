@@ -45,6 +45,15 @@ enum AuditAction: string
     case PaymentMethodActivated = 'payment.method_activated';
     case PaymentMethodDeactivated = 'payment.method_deactivated';
 
+    // Phase 12B: adding or removing a method, and activating or deactivating
+    // it for one event. Per-event activation lives in its own table and is
+    // recorded separately from the global toggle, so the trail answers "was
+    // this method offered for *that* event" without reconstructing state.
+    case PaymentMethodCreated = 'payment.method_created';
+    case PaymentMethodDeleted = 'payment.method_deleted';
+    case PaymentMethodEventToggled = 'payment.method_event_toggled';
+    case PaymentMethodEventInherited = 'payment.method_event_inherited';
+
     // Phase 13: a manual resend of a participant's e-ticket. The automatic
     // attempt made during approval lives in `email_deliveries`; this records
     // who decided to send the ticket again.
@@ -76,6 +85,10 @@ enum AuditAction: string
             self::PaymentMethodUpdated => 'Metode pembayaran diubah',
             self::PaymentMethodActivated => 'Metode pembayaran diaktifkan',
             self::PaymentMethodDeactivated => 'Metode pembayaran dinonaktifkan',
+            self::PaymentMethodCreated => 'Metode pembayaran ditambahkan',
+            self::PaymentMethodDeleted => 'Metode pembayaran dihapus',
+            self::PaymentMethodEventToggled => 'Metode pembayaran diatur untuk satu event',
+            self::PaymentMethodEventInherited => 'Pengaturan metode per event dikembalikan ke global',
             self::TicketEmailResent => 'E-ticket dikirim ulang',
         };
     }

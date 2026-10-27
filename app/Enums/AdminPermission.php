@@ -20,12 +20,19 @@ enum AdminPermission: string
     case PaymentProofView = 'payment.proof.view';
     case PaymentVerify = 'payment.verify';
 
-    // Phase 12: the payment settings screen. Toggling a method is separate
-    // from editing the account/VA/QRIS details, which only a Super Admin may
-    // do and is therefore enforced by a policy rather than by a permission
-    // that could be granted to a custom role.
-    case PaymentMethodsView = 'payment-methods.view';
-    case PaymentMethodsManage = 'payment-methods.manage';
+    // Phase 12: the payment settings screen. Phase 12B splits the original
+    // "manage" permission into four, because creating a method, editing global
+    // details, toggling activation, and deleting are materially different
+    // actions: a role that may toggle a method for one event must not thereby
+    // be allowed to delete it or rewrite a bank account. Publishing placeholder
+    // details as official (clearing `is_dummy`) stays Super Admin only and is
+    // enforced by a policy rather than by a permission that could be granted to
+    // a custom role.
+    case PaymentMethodsView = 'payment_methods.view';
+    case PaymentMethodsCreate = 'payment_methods.create';
+    case PaymentMethodsUpdate = 'payment_methods.update';
+    case PaymentMethodsToggle = 'payment_methods.toggle';
+    case PaymentMethodsDelete = 'payment_methods.delete';
 
     case CheckInPerform = 'check-in.perform';
     case RolesView = 'roles.view';
@@ -58,7 +65,10 @@ enum AdminPermission: string
             self::PaymentProofView => 'Lihat bukti pembayaran',
             self::PaymentVerify => 'Setujui / tolak pembayaran',
             self::PaymentMethodsView => 'Lihat metode pembayaran',
-            self::PaymentMethodsManage => 'Aktifkan / nonaktifkan metode pembayaran',
+            self::PaymentMethodsCreate => 'Tambah metode pembayaran',
+            self::PaymentMethodsUpdate => 'Ubah detail metode pembayaran',
+            self::PaymentMethodsToggle => 'Aktifkan / nonaktifkan metode pembayaran',
+            self::PaymentMethodsDelete => 'Hapus metode pembayaran',
             self::CheckInPerform => 'Check-in peserta',
             self::RolesView => 'Lihat role',
             self::RolesManage => 'Kelola role',
@@ -78,7 +88,7 @@ enum AdminPermission: string
             self::DashboardView => 'Dashboard',
             self::EventsView, self::EventsCreate, self::EventsUpdate => 'Event',
             self::OrdersView => 'Pesanan',
-            self::PaymentProofView, self::PaymentVerify, self::PaymentMethodsView, self::PaymentMethodsManage => 'Pembayaran',
+            self::PaymentProofView, self::PaymentVerify, self::PaymentMethodsView, self::PaymentMethodsCreate, self::PaymentMethodsUpdate, self::PaymentMethodsToggle, self::PaymentMethodsDelete => 'Pembayaran',
             self::CheckInPerform => 'Check-in',
             self::RolesView, self::RolesManage, self::PermissionsManage => 'Hak Akses',
             self::AdminAccountsView, self::AdminAccountsManage => 'Akun Admin',
@@ -100,8 +110,11 @@ enum AdminPermission: string
             self::OrdersView => 'Membuka daftar dan detail pesanan peserta.',
             self::PaymentProofView => 'Membuka berkas bukti pembayaran peserta.',
             self::PaymentVerify => 'Menyetujui atau menolak pembayaran dan menerbitkan tiket.',
-            self::PaymentMethodsView => 'Membuka daftar metode pembayaran beserta status dan detailnya.',
-            self::PaymentMethodsManage => 'Mengaktifkan atau menonaktifkan metode pembayaran untuk pesanan baru.',
+            self::PaymentMethodsView => 'Membuka daftar metode pembayaran beserta status, tipe, dan detailnya.',
+            self::PaymentMethodsCreate => 'Menambah metode pembayaran baru beserta detail dan gambarnya.',
+            self::PaymentMethodsUpdate => 'Mengubah nama, tipe, detail penerima, dan langkah pembayaran sebuah metode.',
+            self::PaymentMethodsToggle => 'Mengaktifkan atau menonaktifkan metode pembayaran, baik secara global maupun untuk satu event.',
+            self::PaymentMethodsDelete => 'Menghapus metode pembayaran yang tidak dipakai pesanan atau pembayaran mana pun.',
             self::CheckInPerform => 'Membuka scanner dan melakukan check-in peserta.',
             self::RolesView => 'Membuka daftar role beserta permission-nya.',
             self::RolesManage => 'Membuat, mengubah, menghapus role, dan mengatur permission-nya.',

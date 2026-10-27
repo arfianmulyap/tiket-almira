@@ -442,6 +442,61 @@ Catatan implementasi:
   `config/payments.php` + `PaymentMethodSeeder`. Daftar final metode dan
   detail rekening/VA/QRIS tetap menunggu keputusan bisnis.
 
+Catatan: tiga keterbatasan Phase 12 di atas — belum ada formulir tambah metode,
+validasi detail yang belum mengikuti tipe, dan aktivasi yang masih global —
+dikerjakan di Phase 12B berikut.
+
+## 12B
+
+### Payment Method Management (CRUD)
+
+**Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
+
+Melengkapi Phase 12: metode pembayaran dikelola dari dashboard, aktivasi diatur
+per event, dan detail validasinya mengikuti tipe.
+
+- Katalog global (`payment_methods`) diperluas dengan `type` dan `qr_image_path`.
+  Tambah metode lewat formulir; kunci hanya diisi saat pembuatan karena dipakai
+  `payments.method` dan snapshot pesanan, dan kunci yang masih dirujuk riwayat
+  ditolak agar riwayat tidak berpindah ke metode baru.
+- Tipe pembayaran (`App\Enums\PaymentMethodType`: transfer bank, virtual account,
+  e-wallet, QRIS) menentukan detail mana yang wajib diisi dan apakah QR image
+  diperlukan. Hanya baris detail yang labelnya dikenal aplikasi yang ditulis;
+  baris lama bertanda tidak dikenal tetap disimpan dan tetap tampil.
+- Aktivasi per event disimpan di tabel baru `event_payment_methods` sebagai
+  override. Tanpa baris override, event mengikuti status global, sehingga
+  instalasi yang tidak pernah membuka layar per event berperilaku sama seperti
+  Phase 12. Layar aktivasi baru: `admin/events/{event}/payment-methods`, lengkap
+  dengan tombol "Ikuti Global" untuk membatalkan override.
+- Peserta hanya ditawari metode yang **aktif**, **lengkap** detailnya, dan tidak
+  dimatikan untuk event tersebut. Snapshot instruksi pesanan dibuat per event
+  (`PaymentMethodRegistry::snapshotForEvent`), sehingga aturan itu berlaku pada
+  pesanan baru tanpa menyentuh pesanan lama.
+- Permission dipecah dan diganti namanya: `payment_methods.view`,
+  `.create`, `.update`, `.toggle`, `.delete`. Migrasi rename bekerja berdasarkan
+  id sehingga role yang sudah diberi akses tidak kehilangan aksesnya. Menandai
+  detail sebagai data resmi (menghapus `is_dummy`) tetap hanya Super Admin, dan
+  pemeriksaan itu tidak dapat dilewati lewat request langsung. Kontrol `is_dummy`
+  tidak dirender untuk non-Super Admin, dan flag yang tidak dikirim berarti
+  status data **dipertahankan** — bukan diturunkan menjadi data contoh, karena
+  penurunan itu akan menyembunyikan metode yang sudah dikonfirmasi bisnis.
+- Hapus aman: metode yang sudah dirujuk `payments.method` atau tersimpan pada
+  snapshot pesanan mana pun ditolak. Alternatifnya adalah menonaktifkan, yang
+  ditawarkan di UI; `payment_methods.delete` hanya berguna untuk metode yang
+  benar-benar belum pernah dipakai.
+- Audit: `payment.method_created`, `payment.method_updated` (before/after),
+  `payment.method_activated/deactivated`, `payment.method_event_toggled`
+  (dengan `event_id` dan `event_name`), `payment.method_event_inherited`, dan
+  `payment.method_deleted`.
+- Model data: detail tetap global, aktivasi per event. Tidak ada detail rekening
+  per event, karena itu di luar lingkup.
+- Sesuai Testing Policy, tidak ada automated test baru. Verifikasi: empat migrasi
+  berjalan (`type`+`qr_image_path`, `event_payment_methods`, rename permission,
+  backfill tipe dari config), `RolePermissionSeeder` (19 permission, Admin tetap
+  `payment_methods.view` + `.toggle`), `route:list` (10 route metode pembayaran),
+  kompilasi Blade (`view:cache`), Pint, dan smoke check dalam transaksi yang
+  di-rollback (scoping per event, snapshot pesanan, keamanan hapus).
+
 ## 13
 
 ### Email Notification & PDF E-ticket

@@ -40,4 +40,17 @@
             @endforeach
         </ol>
     @endif
+
+    @if (filled($method->qrImageUrl))
+        {{-- QRIS: the participant has to see the code in order to scan it, so
+             the image itself is part of the instructions. The URL comes from the
+             order's snapshot, which is what the participant was shown when the
+             order was created. --}}
+        <img
+            src="{{ $method->qrImageUrl }}"
+            alt="Kode QR pembayaran {{ $method->label }}"
+            class="payment-qr-image"
+            loading="lazy"
+        >
+    @endif
 </div>
