@@ -1,9 +1,10 @@
 # IMPLEMENTATION_PLAN.md — Almira Tiket Event
 
-**Version:** 1.0  
-**Status:** Initial implementation plan  
+**Version:** 1.1  
+**Status:** Dokumen hidup — status per fase diperbarui 27 Oktober 2026  
 **Stack:** Laravel + MySQL + Blade  
-**Source of truth:** `PRD.md`, `AGENTS.md`, `styling.md`
+**Source of truth:** `PRD.md`, `AGENTS.md`, `styling.md`  
+**Runbook:** `docs/OPERATIONS.md` — deploy, QA manual per fase, keterbatasan yang diketahui
 
 ---
 
@@ -19,6 +20,52 @@ AI coding agent wajib:
 - Tidak melanjutkan fase berikutnya sebelum acceptance criteria fase aktif terpenuhi.
 - Tidak mengarang keputusan bisnis yang belum dikonfirmasi.
 
+### 1.1 Status fase (per 27 Oktober 2026)
+
+| Fase | Topik | Status | Verifikasi / QA |
+| --- | --- | --- | --- |
+| 01 | Fondasi & login admin | Terimplementasi | `tests/Feature/Auth` |
+| 02 | Design system & layout | Terimplementasi | `DesignSystemTest`, `FormComponentTest` |
+| 03 | Event & poster | Terimplementasi | `EventManagementTest`, `EventPosterTest`, `EventStatusTest` |
+| 04 | Pemesanan & reservasi kuota | Terimplementasi | `OrderingTest`, `ConcurrentOrderingTest`, `QuotaIntegrityTest` |
+| 05 | Pembayaran manual & bukti | Terimplementasi | `PaymentProofTest`, `PaymentProofValidationTest` |
+| 06 | Tenggat & integritas kuota | Terimplementasi | `OrderExpiryTest`, `ExpireOverdueOrdersCommandTest` |
+| 07 | Verifikasi & e-ticket | Terimplementasi | `PaymentVerificationTest`, `TicketIssuanceTest` |
+| 08 | QR check-in | Terimplementasi | belum ada automated test; QA manual |
+| 09 | Dashboard, runbook, QA rilis | Terimplementasi | `docs/OPERATIONS.md` §1–§6 |
+| 10 | Role & permission | `READY_FOR_REVIEW` | `docs/OPERATIONS.md` §7 |
+| 11 | Akun admin & undangan | `READY_FOR_REVIEW` | `docs/OPERATIONS.md` §8 |
+| 12 | Metode pembayaran & audit log | `READY_FOR_REVIEW` | `docs/OPERATIONS.md` §9 |
+| 12B | Metode pembayaran CRUD & per event | `READY_FOR_REVIEW` | `docs/OPERATIONS.md` §9 (tabel QA 15 langkah) |
+| 13 | Email transaksional & PDF e-ticket | `READY_FOR_REVIEW` | `docs/OPERATIONS.md` §10 |
+| 14 | Pengingat WhatsApp | `READY_FOR_REVIEW` | `docs/OPERATIONS.md` §11 |
+| 15 | Integrasi review & QA manual akhir | `NOT_STARTED` | belum dimulai |
+
+`Terimplementasi` berarti fase 01–09 sudah menjadi dasar fase berikutnya dan
+tidak ada pekerjaan terbuka di dalamnya; catatan persetujuan tertulis per fase
+tidak disimpan di repository ini.
+
+`READY_FOR_REVIEW` berarti implementasi selesai dan verifikasi non-test sudah
+dilakukan, tetapi pemilik bisnis belum menyatakan hasil QA manualnya. **Hanya
+pemilik bisnis yang boleh mengubah status itu menjadi `DONE`.** Agen/developer
+tidak menaikkan status sendiri, sekalipun seluruh checklist sudah dijalankan.
+
+### 1.2 Cara memperbarui dokumen ini
+
+1. Saat mulai mengerjakan fase: ubah statusnya menjadi `IN_PROGRESS` dan tulis
+   tanggal mulai.
+2. Saat implementasi selesai: ubah menjadi `READY_FOR_REVIEW`, lalu tambahkan
+   bagian **Catatan implementasi** yang memuat keputusan teknis, migrasi,
+   permission baru, konfigurasi, dan file penting. Bagian ini yang dibaca orang
+   berikutnya; jangan diganti dengan ringkasan lisan.
+3. Saat pemilik bisnis menyetujui: ubah menjadi `DONE` beserta tanggal dan nama
+   penyetuju.
+4. Setiap perubahan status ikut memperbarui tabel di §1.1 **dan** tabel status
+   di `PRD.md` §1.2. Bila status berubah karena keputusan bisnis, `PRD.md` §6
+   dan §15 juga harus diperbarui pada perubahan yang sama.
+5. Catatan implementasi fase lama tidak dihapus. Dokumen ini adalah riwayat
+   keputusan, bukan hanya daftar tugas.
+
 ## 2. Project Rules
 
 1. Gunakan Laravel, MySQL, dan Blade sesuai konfigurasi proyek.
@@ -28,9 +75,12 @@ AI coding agent wajib:
 5. Jangan menambahkan payment gateway atau integrasi eksternal tanpa persetujuan.
 6. Jangan menerbitkan tiket sebelum pembayaran disetujui admin.
 7. Terapkan validasi server-side dan otorisasi pada setiap operasi sensitif.
-8. Setiap fase harus menyertakan pengujian yang relevan.
+8. Pengujian mengikuti Testing Policy (bagian tanpa nomor di antara §8 dan §9): fase 01–06 memakai automated test yang sudah ada, sedangkan Phase 07–15 diverifikasi lewat QA manual dan pemeriksaan non-test. Jangan menambah automated test pada fase yang dicakup kebijakan itu.
 9. Jika requirement bertentangan atau belum lengkap, hentikan bagian yang terdampak dan laporkan kebutuhan klarifikasi.
 10. Setelah fase selesai, laporkan file yang berubah, hasil pengujian, dan pekerjaan tersisa.
+11. Jangan menandai fase `DONE` atas inisiatif sendiri. Status itu milik pemilik bisnis setelah QA manual (§1.2).
+12. Jangan menambah dependency, layanan eksternal, atau perubahan schema yang tidak diperlukan oleh fase aktif.
+13. Perubahan yang terlihat benar dari `php -l`, Pint, atau pembacaan file belum tentu berjalan. Jalankan jalur tulis yang diubah (create/update) di lingkungan lokal sebelum melaporkan selesai.
 
 ## 3. Phase 01 — Project Foundation
 
@@ -205,20 +255,23 @@ Phase 04–05.
 
 ---
 
-## Testing Policy — Phase 07, 08, 09, 10, 11, 12, 13, 14.
+## Testing Policy — berlaku untuk Phase 07 sampai 15
 
 ### Objective
-Prioritize implementation progress and manual QA over automated testing for Phases 07, 08, and 09.
+Prioritaskan progres implementasi dan QA manual di atas automated testing untuk
+Phase 07 sampai 15. Phase 01–06 sudah memiliki automated test yang dibuat
+sebelum kebijakan ini berlaku; test itu dipertahankan apa adanya dan tidak
+menjadi syarat untuk fase berikutnya.
 
 ### Rules
-1. Do NOT create unit tests, feature tests, integration tests, browser tests, or end-to-end tests for Phase 07, Phase 08, Phase 09, Phase 10. Phase 11, Phase 12, Phase 13, and Phase 14.
-2. Do NOT run automated test suites such as `php artisan test`, PHPUnit, Pest, or other automated testing commands during these phases.
-3. Do NOT spend time creating, updating, debugging, or fixing automated tests for these phases.
-4. Do NOT block phase completion because automated tests are missing or have not been executed.
-5. Continue to follow Laravel coding conventions, validate user input, handle errors, enforce authorization, and maintain database integrity.
-6. Perform basic non-test verification where practical, such as checking routes, reviewing migrations, checking logs, and confirming that the application can start without errors. Do not turn these checks into an automated testing effort.
-7. Document the features implemented, relevant routes, expected behavior, known limitations, and manual QA steps for the user.
-8. If an existing automated test fails or a test-related issue is discovered, report it briefly without spending time fixing or expanding the test suite, unless the issue reveals an actual application defect that must be corrected.
+1. Jangan membuat unit test, feature test, integration test, browser test, atau end-to-end test untuk Phase 07 sampai Phase 15.
+2. Jangan menjalankan suite otomatis (`php artisan test`, PHPUnit, Pest) pada fase-fase tersebut.
+3. Jangan membuat, memperbarui, men-debug, atau memperbaiki automated test untuk fase-fase itu.
+4. Jangan menahan penyelesaian fase karena automated test tidak ada atau tidak dijalankan.
+5. Tetap ikuti konvensi Laravel, validasi input, penanganan error, otorisasi, dan integritas database.
+6. Verifikasi non-test tetap wajib: `php -l`, Pint, `php artisan view:cache`, `route:list`, `schedule:list`, dan **menjalankan jalur tulis yang diubah** (create/update/delete) pada data uji yang di-rollback. Membaca kode atau lolos lint tidak membuktikan sebuah jalur tulis berjalan.
+7. Dokumentasikan fitur, route, perilaku yang diharapkan, keterbatasan, dan langkah QA manual pengguna di `docs/OPERATIONS.md`.
+8. Jika automated test lama gagal atau ada masalah terkait test, laporkan singkat tanpa memperluas test suite — kecuali kegagalan itu menunjukkan cacat aplikasi yang harus diperbaiki.
 
 ### Manual QA Handoff
 At the end of each phase, provide:
@@ -331,13 +384,9 @@ Phase 03–08.
 
 ---
 
-## 10
-
-### Role & Permission Management
+## 12. Phase 10 — Role & Permission Management
 
 **Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
-
-Prioritas pertama
 
 Membangun fondasi sistem hak akses.
 
@@ -349,9 +398,7 @@ Membangun fondasi sistem hak akses.
 
 Selesai jika: akses menu dan setiap tindakan backend mengikuti permission terbaru.
 
-## 11
-
-### Admin Account & Invitation
+## 13. Phase 11 — Admin Account & Invitation
 
 **Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
 
@@ -388,9 +435,7 @@ Catatan implementasi:
   penuh tetap menjadi scope Phase 13.
 
 
-## 12
-
-### Payment Settings & Audit Log
+## 14. Phase 12 — Payment Settings & Audit Log
 
 **Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
 
@@ -444,11 +489,10 @@ Catatan implementasi:
 
 Catatan: tiga keterbatasan Phase 12 di atas — belum ada formulir tambah metode,
 validasi detail yang belum mengikuti tipe, dan aktivasi yang masih global —
-dikerjakan di Phase 12B berikut.
+sudah ditutup di Phase 12B (§15). Bagian ini dibiarkan sebagai riwayat agar
+alasan perubahan itu tetap terbaca.
 
-## 12B
-
-### Payment Method Management (CRUD)
+## 15. Phase 12B — Payment Method Management (CRUD)
 
 **Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
 
@@ -496,10 +540,26 @@ per event, dan detail validasinya mengikuti tipe.
   `payment_methods.view` + `.toggle`), `route:list` (10 route metode pembayaran),
   kompilasi Blade (`view:cache`), Pint, dan smoke check dalam transaksi yang
   di-rollback (scoping per event, snapshot pesanan, keamanan hapus).
+- Dua bug runtime ditemukan saat QA manual dan sudah diperbaiki:
+  `PaymentMethodController::store()` memanggil `nextSortOrder()` yang tidak
+  pernah ada (kini helper privat: `max('sort_order') + 1`, menambahkan di akhir
+  tanpa menomori ulang dan tanpa menutup celah), dan closure `DB::transaction`
+  pada `update()` memakai `$before` tanpa menangkapnya, sehingga **setiap** simpan
+  "Ubah Detail" gagal 500. Keduanya lolos `php -l`, Pint, dan pembacaan file —
+  hanya terlihat ketika jalur tulis benar-benar dijalankan. Aturan ini sekarang
+  tercatat di §2 butir 13 dan §23 butir 2.
+- Verifikasi ulang setelah perbaikan: create/update dijalankan nyata lalu
+  di-rollback (sort 2 → 3, `is_active=false`, `is_dummy=false`, detail dan
+  langkah tersimpan, duplikat kunci ditolak validasi, role non-berizin 403,
+  `is_dummy` dipertahankan saat flag tidak dikirim), lima halaman admin dirender
+  lewat controller, dan perilaku snapshot diuji lewat `OrderService`
+  (metode event 6 dikosongkan → instruksi kosong, dikembalikan → instruksi
+  pulih; override dan pesanan tidak berubah setelah rollback).
+- Yang belum tercakup verifikasi otomatis/manual: isolasi antar-event (butuh
+  event kedua), unggah gambar QRIS sungguhan, dan aktivasi metode dengan detail
+  belum lengkap (langkah 5 pada tabel QA `docs/OPERATIONS.md` §9).
 
-## 13
-
-### Email Notification & PDF E-ticket
+## 16. Phase 13 — Email Notification & PDF E-ticket
 
 **Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
 
@@ -570,9 +630,7 @@ Catatan implementasi:
   keputusan itu nanti tidak kehilangan data.
 
 
-## 14
-
-### WhatsApp Notification Integration
+## 17. Phase 14 — WhatsApp Notification Integration
 
 **Status:** `READY_FOR_REVIEW` — implementasi selesai, menunggu QA manual.
 
@@ -634,9 +692,9 @@ Catatan implementasi:
   dan QA manual.
 
 
-## 15
+## 18. Phase 15 — Integration Review & Manual QA
 
-### Integration Review & Manual QA
+**Status:** `NOT_STARTED` — belum dimulai; menunggu QA manual Phase 10–14 selesai.
 
 Memastikan seluruh improvement bekerja bersama.
 
@@ -650,9 +708,13 @@ Selesai jika: kamu dapat menjalankan checklist QA manual dan menyetujui hasilnya
 
 ---
 
-## 12. Testing Strategy
+## 19. Testing Strategy
 
-Untuk setiap fase:
+Bagian ini berlaku untuk **Phase 01–06**. Phase 07–15 mengikuti bagian *Testing
+Policy* (tanpa automated test baru, verifikasi lewat QA manual). Keduanya bukan
+aturan yang bertentangan: Testing Policy menang untuk fase yang dicakupnya.
+
+Untuk fase yang memakai automated test:
 1. Jalankan automated tests yang relevan.
 2. Tambahkan regression tests untuk perubahan yang menyentuh alur yang sudah ada.
 3. Uji validasi dan otorisasi.
@@ -660,47 +722,109 @@ Untuk setiap fase:
 5. Untuk kuota, pembayaran, penerbitan tiket, dan check-in, uji integritas data serta request bersamaan.
 6. Jangan menandai fase selesai jika pengujian yang diwajibkan gagal.
 
+Untuk fase yang dicakup Testing Policy, "pengujian yang diwajibkan" berarti:
+- verifikasi non-test pada butir 6 Testing Policy, dan
+- QA manual di `docs/OPERATIONS.md` yang disetujui pemilik bisnis.
+
 ---
 
-## 13. Task Execution Protocol
+## 20. Task Execution Protocol
 
 Ketika diminta mengerjakan task:
 
 1. Identifikasi fase dan scope yang diminta.
 2. Baca `AGENTS.md` serta bagian relevan `PRD.md` dan `styling.md`.
-3. Periksa kode dan test yang sudah ada.
+3. Periksa kode, migrasi, dan test yang sudah ada.
 4. Rencanakan file yang akan diubah.
 5. Implementasikan hanya scope task tersebut.
-6. Jalankan pengujian yang relevan.
+6. Jalankan verifikasi yang relevan — §19 untuk Phase 01–06, Testing Policy untuk Phase 07–15.
 7. Perbaiki regresi yang disebabkan perubahan.
 8. Laporkan hasil dan sisa pekerjaan.
+9. Perbarui `IMPLEMENTATION_PLAN.md` §1.1, catatan implementasi fase, dan `docs/OPERATIONS.md` sebelum menyatakan selesai.
 
 Jangan otomatis mengerjakan fase selanjutnya.
 
 ---
 
-## 14. Progress Tracking
+## 21. Progress Tracking
 
 Tandai fase sebagai:
-- `NOT_STARTED`
-- `IN_PROGRESS`
-- `BLOCKED`
-- `DONE`
+- `NOT_STARTED` — belum dikerjakan.
+- `IN_PROGRESS` — sedang dikerjakan.
+- `READY_FOR_REVIEW` — implementasi dan verifikasi non-test selesai; QA manual menunggu pemilik bisnis.
+- `BLOCKED` — menunggu keputusan atau akses; sebutkan apa yang ditunggu.
+- `DONE` — pemilik bisnis sudah menyetujui hasil QA manual.
 
-Jangan menandai `DONE` tanpa memenuhi acceptance criteria dan menjalankan pengujian yang relevan.
+Jangan menandai `DONE` tanpa acceptance criteria terpenuhi, verifikasi yang relevan dijalankan, dan persetujuan eksplisit pemilik bisnis.
 
-Catat keputusan bisnis yang belum terjawab sebagai open decisions, bukan asumsi final.
+Fase `BLOCKED` harus menyebutkan penghalangnya secara konkret (mis. "butuh event kedua untuk menguji isolasi per event") agar penghalang itu bisa dihilangkan, bukan sekadar dicatat.
+
+Catat keputusan bisnis yang belum terjawab sebagai open decisions di `PRD.md` §15, bukan asumsi final.
 
 ---
 
-## 15. Final Deliverable
+## 22. Final Deliverable
 
 Aplikasi dianggap siap untuk evaluasi operasional setelah:
-- Semua fase yang termasuk MVP selesai.
+- Semua fase yang termasuk MVP selesai dan tidak ada fase berstatus `READY_FOR_REVIEW` atau `BLOCKED`.
 - Acceptance criteria terpenuhi.
 - Pengujian alur kritis lulus.
 - Konfigurasi pembayaran, email, dan environment telah diverifikasi.
 - Dokumentasi setup dan operasional tersedia.
 - Risiko dan keputusan terbuka telah ditinjau oleh pemilik bisnis.
+- Keterbatasan di `docs/OPERATIONS.md` §12 ditinjau dan diterima pemilik bisnis.
+
+## 23. Catatan serah terima untuk developer berikutnya
+
+### Yang perlu diketahui sebelum menyentuh kode
+
+1. **Baca kode, bukan hanya dokumen.** Dokumen ini mencatat niat dan keputusan;
+   route, policy, dan migration adalah kenyataan. Bila keduanya berbeda,
+   perbaiki dokumen pada perubahan yang sama.
+2. **Verifikasi jalur tulis dengan menjalankannya.** Dua bug Phase 12B (helper
+   `nextSortOrder()` yang tidak ada dan variabel `$before` yang tidak ditangkap
+   closure transaksi) lolos `php -l`, Pint, dan penelusuran file; keduanya hanya
+   terlihat saat `store()`/`update()` benar-benar dijalankan. Jalankan create dan
+   update pada data uji yang di-rollback sebelum melaporkan selesai.
+3. **Jangan menaikkan status fase sendiri.** `READY_FOR_REVIEW` → `DONE` adalah
+   keputusan pemilik bisnis (§1.2, §21).
+4. **Jangan menambah dependency tanpa persetujuan.** PDF e-ticket sengaja dibuat
+   tanpa pustaka PDF baru; email dan WhatsApp memakai driver bawaan.
+5. **Data contoh tidak boleh tampil di production.** Metode pembayaran bertanda
+   `is_dummy` disembunyikan di luar `local`/`testing`. Jangan melonggarkan aturan
+   ini untuk kemudahan QA.
+6. **Snapshot adalah pengaman riwayat.** Instruksi pembayaran disimpan per
+   pesanan; perubahan katalog tidak boleh menyentuh pesanan lama.
+7. **Uji isolasi per event butuh dua event.** QA Phase 12B langkah 6–8 tidak
+   dapat dilakukan pada instalasi yang hanya punya satu event.
+
+### Di mana mencari sesuatu
+
+| Kebutuhan | Lokasi |
+| --- | --- |
+| Kebutuhan produk & open decisions | `PRD.md` §8, §15 |
+| Status fase & acceptance criteria | dokumen ini §1.1 dan bagian fase |
+| Perintah deploy, backup, scheduler | `docs/OPERATIONS.md` §1–§6 |
+| Checklist QA manual per fase | `docs/OPERATIONS.md` §7–§11 |
+| Keterbatasan yang sudah diketahui | `docs/OPERATIONS.md` §12 |
+| Skema database | `database/migrations` |
+| Katalog permission | `app/Enums/AdminPermission.php` + `RolePermissionSeeder` |
+| Katalog metode pembayaran awal | `config/payments.php` + `PaymentMethodSeeder` |
+| Konfigurasi email/WhatsApp/cron | `config/tickets.php`, `config/whatsapp.php`, `config/cron.php` |
+
+### Pekerjaan yang tersisa
+
+- QA manual pemilik bisnis untuk Phase 10, 11, 12, 12B, 13, dan 14.
+- Phase 15 (integrasi review & QA akhir) belum dimulai.
+- Keputusan bisnis terbuka: `PRD.md` §15 (metode dan detail pembayaran resmi,
+  provider email dan WhatsApp, kebijakan unggah ulang bukti, retry otomatis,
+  reset check-in, zona waktu, disk produksi, pemisahan tugas admin).
+
+### Riwayat dokumen
+
+| Versi | Tanggal | Perubahan |
+| --- | --- | --- |
+| 1.0 | 21 Oktober 2026 | Rencana awal Phase 01–09 dan improvement 10–15 |
+| 1.1 | 27 Oktober 2026 | Status per fase (§1.1), aturan pembaruan dokumen (§1.2), penomoran bagian dirapikan (nomor bagian = nomor fase + 2), Testing Policy diperluas ke Phase 07–15 dan direkonsiliasi dengan Testing Strategy, catatan serah terima (§23), status `READY_FOR_REVIEW` ditambahkan ke Progress Tracking |
 
 **End of Implementation Plan**
