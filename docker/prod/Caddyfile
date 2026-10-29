@@ -1,0 +1,38 @@
+# Caddy configuration for Almira Tiket Event.
+#
+# Caddy obtains and renews the Let's Encrypt certificate automatically. Ports
+# 80 and 443 must be reachable from the internet, and DNS for APP_DOMAIN must
+# already point at this server.
+#
+# Static files and index.php are read from the bind-mounted checkout at /app,
+# which is also mounted at /app inside the app container, so the SCRIPT_FILENAME
+# handed to php-fpm resolves to the same file.
+
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$APP_DOMAIN} {
+	root * /app/public
+
+	encode zstd gzip
+
+	# Serves public/index.php through php-fpm and falls back to it for
+	# unknown paths, matching Laravel's front controller.
+	php_fastcgi app:9000
+
+	file_server
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

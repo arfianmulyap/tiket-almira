@@ -1,0 +1,116 @@
+# Production stack for Almira Tiket Event — single VPS.
+#
+#   docker compose -f compose.prod.yaml up -d
+#
+# This is separate from compose.yaml, which is the Laravel Sail development
+# stack (bind mounts, Mailpit, Selenium, exposed MySQL). Do not run that file
+# on the server.
+#
+# Values come from .env in the same directory (compose reads it automatically
+# for ${...} interpolation). Required additions for production:
+#
+#   APP_DOMAIN=tiket.almira.my.id
+#   ACME_EMAIL=you@example.com
+#   DB_ROOT_PASSWORD=<strong password, different from DB_PASSWORD>
+
+name: tiket-almira
+
+services:
+    app:
+        build:
+            context: .
+            dockerfile: docker/prod/php.Dockerfile
+        image: tiket-almira/app:latest
+        restart: unless-stopped
+        working_dir: /app
+        volumes:
+            - ./:/app
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - backend
+
+    web:
+        image: caddy:2-alpine
+        restart: unless-stopped
+        ports:
+            - '80:80'
+            - '443:443'
+            - '443:443/udp'
+        environment:
+            APP_DOMAIN: ${APP_DOMAIN:-tiket.almira.my.id}
+            ACME_EMAIL: ${ACME_EMAIL:-admin@almira.my.id}
+        volumes:
+            - ./:/app:ro
+            - ./docker/prod/Caddyfile:/etc/caddy/Caddyfile:ro
+            - caddy_data:/data
+            - caddy_config:/config
+        depends_on:
+            - app
+        networks:
+            - backend
+
+    mysql:
+        image: 'mysql:8.4'
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE}
+            MYSQL_USER: ${DB_USERNAME}
+            MYSQL_PASSWORD: ${DB_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+        volumes:
+            - mysql_data:/var/lib/mysql
+        healthcheck:
+            test:
+                - CMD-SHELL
+                - mysqladmin ping -h 127.0.0.1 -uroot -p"$$MYSQL_ROOT_PASSWORD" --silent
+            interval: 10s
+            timeout: 5s
+            retries: 12
+            start_period: 30s
+        networks:
+            - backend
+
+    # Expires overdue orders and sends payment reminders every minute. Without
+    # this container the scheduler is dead and order status drifts from reality
+    # (docs/OPERATIONS.md section 1).
+    scheduler:
+        image: tiket-almira/app:latest
+        restart: unless-stopped
+        working_dir: /app
+        # Runs as the same uid as the php-fpm workers so both can write
+        # storage/logs without fighting over ownership.
+        user: '82:82'
+        command: ['php', 'artisan', 'schedule:work']
+        volumes:
+            - ./:/app
+        depends_on:
+            mysql:
+                condition: service_healthy
+        networks:
+            - backend
+
+    # One-shot Vite build: `--profile build run --rm assets`.
+    # Node is only needed at deploy time, so it is not part of the runtime.
+    assets:
+        image: node:22-alpine
+        profiles: ['build']
+        working_dir: /app
+        command: sh -c "npm ci && npm run build"
+        volumes:
+            - ./:/app
+        networks:
+            - backend
+
+networks:
+    backend:
+        driver: bridge
+
+volumes:
+    mysql_data:
+        driver: local
+    caddy_data:
+        driver: local
+    caddy_config:
+        driver: local
